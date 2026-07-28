@@ -1,13 +1,14 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.0.0
+ * Smarty template for rendering sellers grid v2.1.0
  *}
 
-<div class="argsellers-container">
-    {* Header Title styled matching 'PRINCIPALES MARCAS' & 'SISTEMAS COMPLETOS' *}
-    <div class="argsellers-header-title">
-        <span class="argseller-title-light">ASESORES</span> <span class="argseller-title-bold">COMERCIALES</span>
-    </div>
+<div class="argsellers-container" style="width: 100% !important; margin-bottom: 30px !important;">
+    {* Inline styled title guaranteeing theme override *}
+    <h2 style="text-align: center !important; margin-bottom: 25px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; font-size: 24px !important; line-height: 1.3 !important; display: block !important; border: none !important; padding: 0 !important; background: transparent !important;">
+        <span style="font-weight: 300 !important; color: #009ee3 !important; font-size: 24px !important;">ASESORES</span> 
+        <span style="font-weight: 700 !important; color: #009ee3 !important; font-size: 24px !important;">COMERCIALES</span>
+    </h2>
 
     <div class="argsellers-grid">
         {foreach from=$argsellers item=seller}
