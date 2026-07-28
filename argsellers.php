@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '1.8.0';
+        $this->version = '1.8.1';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -245,9 +245,14 @@ class Argsellers extends Module
             return $output;
         }
 
+        $grid_html = $this->renderSellersGrid();
+        if (empty($grid_html)) {
+            return $output; // Fallback: Do not strip tag if grid fails or sellers table query returns empty
+        }
+
         return str_replace(
             '[argsellers]',
-            $this->renderSellersGrid(),
+            $grid_html,
             $output
         );
     }
@@ -256,7 +261,10 @@ class Argsellers extends Module
     {
         if (isset($params['html'])) {
             if (strpos($params['html'], '[argsellers]') !== false) {
-                $params['html'] = str_replace('[argsellers]', $this->renderSellersGrid(), $params['html']);
+                $grid_html = $this->renderSellersGrid();
+                if (!empty($grid_html)) {
+                    $params['html'] = str_replace('[argsellers]', $grid_html, $params['html']);
+                }
             }
         }
         return $params;
@@ -264,49 +272,61 @@ class Argsellers extends Module
 
     public function renderSellersGrid()
     {
-        $sellers = Db::getInstance()->executeS('
-            SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
-            WHERE `active` = 1
-            ORDER BY `position` ASC
-        ');
+        try {
+            $sellers = Db::getInstance()->executeS('
+                SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
+                WHERE `active` = 1
+                ORDER BY `position` ASC
+            ');
 
-        if (empty($sellers)) {
+            if (empty($sellers)) {
+                // Fallback query if active field filter returns empty
+                $sellers = Db::getInstance()->executeS('
+                    SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
+                    ORDER BY `position` ASC
+                ');
+            }
+
+            if (empty($sellers)) {
+                return '';
+            }
+
+            $phone_prefix = Configuration::get('ARGSELLERS_PHONE_PREFIX');
+            if (!$phone_prefix) {
+                $phone_prefix = '+54 9 11';
+            }
+
+            $email_suffix = Configuration::get('ARGSELLERS_EMAIL_SUFFIX');
+            if (!$email_suffix) {
+                $email_suffix = '@argseguridad.com';
+            }
+
+            foreach ($sellers as &$seller) {
+                $raw_phone = preg_replace('/[^0-9]/', '', $seller['phone']);
+                $prefix_digits = preg_replace('/[^0-9]/', '', $phone_prefix);
+                $seller['clean_whatsapp'] = $prefix_digits . $raw_phone;
+
+                $formatted_num = $raw_phone;
+                if (strlen($raw_phone) >= 8) {
+                    $formatted_num = substr($raw_phone, 0, 4) . '-' . substr($raw_phone, 4);
+                }
+                $seller['formatted_phone'] = $phone_prefix . ' ' . $formatted_num;
+
+                if (strpos($seller['email'], '@') === false) {
+                    $seller['full_email'] = $seller['email'] . $email_suffix;
+                } else {
+                    $seller['full_email'] = $seller['email'];
+                }
+            }
+
+            $this->context->smarty->assign(array(
+                'argsellers' => $sellers,
+                'argsellers_img_path' => $this->context->link->getMediaLink('/modules/' . $this->name . '/views/img/')
+            ));
+
+            return $this->display(__FILE__, 'views/templates/hook/argsellers.tpl');
+        } catch (Exception $e) {
             return '';
         }
-
-        $phone_prefix = Configuration::get('ARGSELLERS_PHONE_PREFIX');
-        if (!$phone_prefix) {
-            $phone_prefix = '+54 9 11';
-        }
-
-        $email_suffix = Configuration::get('ARGSELLERS_EMAIL_SUFFIX');
-        if (!$email_suffix) {
-            $email_suffix = '@argseguridad.com';
-        }
-
-        foreach ($sellers as &$seller) {
-            $raw_phone = preg_replace('/[^0-9]/', '', $seller['phone']);
-            $prefix_digits = preg_replace('/[^0-9]/', '', $phone_prefix);
-            $seller['clean_whatsapp'] = $prefix_digits . $raw_phone;
-
-            $formatted_num = $raw_phone;
-            if (strlen($raw_phone) >= 8) {
-                $formatted_num = substr($raw_phone, 0, 4) . '-' . substr($raw_phone, 4);
-            }
-            $seller['formatted_phone'] = $phone_prefix . ' ' . $formatted_num;
-
-            if (strpos($seller['email'], '@') === false) {
-                $seller['full_email'] = $seller['email'] . $email_suffix;
-            } else {
-                $seller['full_email'] = $seller['email'];
-            }
-        }
-
-        $this->context->smarty->assign(array(
-            'argsellers' => $sellers,
-            'argsellers_img_path' => $this->context->link->getMediaLink('/modules/' . $this->name . '/views/img/')
-        ));
-
-        return $this->display(__FILE__, 'views/templates/hook/argsellers.tpl');
     }
 }
