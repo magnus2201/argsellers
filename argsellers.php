@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '1.8.3';
+        $this->version = '1.9.0';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -66,7 +66,6 @@ class Argsellers extends Module
             mkdir($imgDir, 0755, true);
         }
 
-        // Seed initial sellers if table is empty
         $this->seedDefaultSellers();
 
         return parent::install() &&
@@ -297,7 +296,6 @@ class Argsellers extends Module
     public function renderSellersGrid()
     {
         try {
-            // Auto seed default sellers if list was emptied
             $this->seedDefaultSellers();
 
             $sellers = Db::getInstance()->executeS('
