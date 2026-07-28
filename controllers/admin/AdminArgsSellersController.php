@@ -258,15 +258,13 @@ class AdminArgsSellersController extends ModuleAdminController
             $this->module->runUpgradeModule();
         }
 
-        // Full PrestaShop & Symfony Cache Purge
-        Tools::clearSmartyCache();
-        Tools::clearXMLCache();
-        Media::clearCache();
-
-        $cache_dir = _PS_ROOT_DIR_ . '/var/cache/';
-        if (file_exists($cache_dir)) {
-            Tools::deleteDirectory($cache_dir . 'dev/', false);
-            Tools::deleteDirectory($cache_dir . 'prod/', false);
+        // Full PrestaShop & Smarty Cache Purge
+        try {
+            Tools::clearSmartyCache();
+            Tools::clearXMLCache();
+            Media::clearCache();
+        } catch (Exception $e) {
+            // Ignore cache clear exceptions
         }
 
         // Keep confirmation message in session cookie for PrestaShop redirect
