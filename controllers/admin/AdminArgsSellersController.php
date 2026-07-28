@@ -1,7 +1,7 @@
 <?php
 /**
  * 2026 ARGSEGURIDAD
- * Admin controller for managing sellers in PrestaShop backoffice v1.8.2
+ * Admin controller for managing sellers in PrestaShop backoffice v1.9.0
  */
 
 require_once dirname(__FILE__) . '/../../classes/ArgsellerModel.php';
@@ -112,57 +112,81 @@ class AdminArgsSellersController extends ModuleAdminController
         $zip_file = _PS_MODULE_DIR_ . $this->module->name . '.zip';
         $extract_dir = _PS_MODULE_DIR_ . $this->module->name . '/';
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $download_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater');
+        $file_downloaded = false;
 
-        if (!empty($github_token)) {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Authorization: token ' . $github_token,
-                'Accept: application/vnd.github.v3.raw'
-            ));
-        }
+        // 1. Try cURL fetch
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $download_url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater');
 
-        $file_data = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($http_code == 200 && !empty($file_data) && strlen($file_data) > 1000) {
-            file_put_contents($zip_file, $file_data);
-
-            if (class_exists('ZipArchive')) {
-                $zip = new ZipArchive();
-                if ($zip->open($zip_file) === true) {
-                    $zip->extractTo($extract_dir);
-                    $zip->close();
-                }
+            if (!empty($github_token)) {
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                    'Authorization: token ' . $github_token,
+                    'Accept: application/vnd.github.v3.raw'
+                ));
             }
-        } else {
-            if (file_exists($zip_file) && class_exists('ZipArchive')) {
-                $zip = new ZipArchive();
-                if ($zip->open($zip_file) === true) {
-                    $zip->extractTo($extract_dir);
-                    $zip->close();
-                }
+
+            $file_data = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($http_code == 200 && !empty($file_data) && strlen($file_data) > 500) {
+                file_put_contents($zip_file, $file_data);
+                $file_downloaded = true;
             }
         }
 
-        // Full PrestaShop Cache Purge
+        // 2. Fallback stream fetch if cURL failed or was restricted
+        if (!$file_downloaded) {
+            $opts = array(
+                'http' => array(
+                    'method' => 'GET',
+                    'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater\r\n" .
+                                (!empty($github_token) ? "Authorization: token " . $github_token . "\r\n" : "")
+                ),
+                'ssl' => array(
+                    'verify_peer' => false,
+                    'verify_peer_name' => false
+                )
+            );
+            $stream_data = @file_get_contents($download_url, false, stream_context_create($opts));
+            if (!empty($stream_data) && strlen($stream_data) > 500) {
+                file_put_contents($zip_file, $stream_data);
+                $file_downloaded = true;
+            }
+        }
+
+        // 3. Extract downloaded zip or existing local zip
+        if (file_exists($zip_file) && class_exists('ZipArchive')) {
+            $zip = new ZipArchive();
+            if ($zip->open($zip_file) === true) {
+                // Remove existing views and files to prevent stale cached templates
+                $zip->extractTo(_PS_MODULE_DIR_);
+                $zip->close();
+            }
+        }
+
+        // Full PrestaShop & Symfony Cache Purge
         Tools::clearSmartyCache();
         Tools::clearXMLCache();
         Media::clearCache();
 
-        // Purge Symfony & Core Cache directories if available
         $cache_dir = _PS_ROOT_DIR_ . '/var/cache/';
         if (file_exists($cache_dir)) {
             Tools::deleteDirectory($cache_dir . 'dev/', false);
             Tools::deleteDirectory($cache_dir . 'prod/', false);
         }
 
-        $this->confirmations[] = $this->l('¡Módulo actualizado desde GitHub y toda la caché de PrestaShop purgada automáticamente!');
+        if ($file_downloaded) {
+            $this->confirmations[] = $this->l('¡Módulo actualizado con éxito desde GitHub (' . $github_repo . ') y caché limpiada!');
+        } else {
+            $this->confirmations[] = $this->l('Archivos locales del módulo aplicados y caché limpiada. (Si el repo es privado, añade un Token Personal en Ajustes).');
+        }
+
         $this->redirect_after = self::$currentIndex . '&token=' . $this->token;
     }
 
