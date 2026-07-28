@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '1.8.1';
+        $this->version = '1.8.2';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -247,7 +247,7 @@ class Argsellers extends Module
 
         $grid_html = $this->renderSellersGrid();
         if (empty($grid_html)) {
-            return $output; // Fallback: Do not strip tag if grid fails or sellers table query returns empty
+            return $output;
         }
 
         return str_replace(
@@ -280,7 +280,6 @@ class Argsellers extends Module
             ');
 
             if (empty($sellers)) {
-                // Fallback query if active field filter returns empty
                 $sellers = Db::getInstance()->executeS('
                     SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
                     ORDER BY `position` ASC

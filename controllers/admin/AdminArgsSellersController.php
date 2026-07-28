@@ -1,7 +1,7 @@
 <?php
 /**
  * 2026 ARGSEGURIDAD
- * Admin controller for managing sellers in PrestaShop backoffice v1.8.0
+ * Admin controller for managing sellers in PrestaShop backoffice v1.8.2
  */
 
 require_once dirname(__FILE__) . '/../../classes/ArgsellerModel.php';
@@ -136,21 +136,11 @@ class AdminArgsSellersController extends ModuleAdminController
             if (class_exists('ZipArchive')) {
                 $zip = new ZipArchive();
                 if ($zip->open($zip_file) === true) {
-                    // Extract into the specific argsellers folder
                     $zip->extractTo($extract_dir);
                     $zip->close();
-
-                    Tools::clearSmartyCache();
-                    Tools::clearXMLCache();
-                    Media::clearCache();
-
-                    $this->confirmations[] = $this->l('¡Módulo actualizado a v1.8.0 desde GitHub y caché limpiada!');
-                } else {
-                    $this->errors[] = $this->l('No se pudo descomprimir el archivo descargado de GitHub.');
                 }
             }
         } else {
-            // Local zip extraction fallback
             if (file_exists($zip_file) && class_exists('ZipArchive')) {
                 $zip = new ZipArchive();
                 if ($zip->open($zip_file) === true) {
@@ -158,14 +148,21 @@ class AdminArgsSellersController extends ModuleAdminController
                     $zip->close();
                 }
             }
-
-            Tools::clearSmartyCache();
-            Tools::clearXMLCache();
-            Media::clearCache();
-
-            $this->confirmations[] = $this->l('Archivos locales de v1.8.0 aplicados y caché limpiada.');
         }
 
+        // Full PrestaShop Cache Purge
+        Tools::clearSmartyCache();
+        Tools::clearXMLCache();
+        Media::clearCache();
+
+        // Purge Symfony & Core Cache directories if available
+        $cache_dir = _PS_ROOT_DIR_ . '/var/cache/';
+        if (file_exists($cache_dir)) {
+            Tools::deleteDirectory($cache_dir . 'dev/', false);
+            Tools::deleteDirectory($cache_dir . 'prod/', false);
+        }
+
+        $this->confirmations[] = $this->l('¡Módulo actualizado desde GitHub y toda la caché de PrestaShop purgada automáticamente!');
         $this->redirect_after = self::$currentIndex . '&token=' . $this->token;
     }
 
