@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '1.8.2';
+        $this->version = '1.8.3';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -66,9 +66,33 @@ class Argsellers extends Module
             mkdir($imgDir, 0755, true);
         }
 
+        // Seed initial sellers if table is empty
+        $this->seedDefaultSellers();
+
         return parent::install() &&
             $this->registerHook('displayHeader') &&
             $this->registerHook('filterHtmlContent');
+    }
+
+    public function seedDefaultSellers()
+    {
+        $count = (int)Db::getInstance()->getValue('SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'argsellers`');
+        if ($count == 0) {
+            $sellers_seed = array(
+                array('id' => 1, 'name' => 'Gabriel', 'role' => 'Ventas / Gremio', 'phone' => '1154553739', 'email' => 'contacto@argseguridad.com'),
+                array('id' => 2, 'name' => 'Cristian', 'role' => 'Ventas / Gremio', 'phone' => '1135678196', 'email' => 'cristian@argseguridad.com'),
+                array('id' => 3, 'name' => 'Guido', 'role' => 'Ventas / Gremio', 'phone' => '1154553750', 'email' => 'guido@argseguridad.com'),
+                array('id' => 4, 'name' => 'Pablo', 'role' => 'Ventas / Gremio', 'phone' => '1167811902', 'email' => 'pablo@argseguridad.com'),
+                array('id' => 5, 'name' => 'Matías', 'role' => 'Proyectos', 'phone' => '1154553771', 'email' => 'matias@argseguridad.com'),
+                array('id' => 6, 'name' => 'Julián', 'role' => 'Sellers / Mayorista', 'phone' => '1121563362', 'email' => 'julian@argseguridad.com')
+            );
+            foreach ($sellers_seed as $s) {
+                Db::getInstance()->execute("
+                    INSERT INTO `" . _DB_PREFIX_ . "argsellers` (`id_seller`, `name`, `role`, `phone`, `email`, `image`, `active`, `position`)
+                    VALUES (" . (int)$s['id'] . ", '" . pSQL($s['name']) . "', '" . pSQL($s['role']) . "', '" . pSQL($s['phone']) . "', '" . pSQL($s['email']) . "', '', 1, " . (int)$s['id'] . ")
+                ");
+            }
+        }
     }
 
     public function uninstall()
@@ -273,6 +297,9 @@ class Argsellers extends Module
     public function renderSellersGrid()
     {
         try {
+            // Auto seed default sellers if list was emptied
+            $this->seedDefaultSellers();
+
             $sellers = Db::getInstance()->executeS('
                 SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
                 WHERE `active` = 1
