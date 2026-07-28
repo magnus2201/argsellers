@@ -90,7 +90,8 @@ class AdminArgsSellersController extends ModuleAdminController
             'href' => 'javascript:void(0);',
             'desc' => $this->l('Actualizar Módulo'),
             'icon' => 'process-icon-refresh icon-cloud-upload',
-            'js' => 'openUpdateConsoleModal();'
+            'js' => 'openUpdateConsoleModal();',
+            'onclick' => 'openUpdateConsoleModal(); return false;'
         );
 
         // Global Settings button
