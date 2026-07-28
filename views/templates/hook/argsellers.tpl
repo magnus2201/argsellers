@@ -1,14 +1,15 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.4.0
+ * Smarty template for rendering sellers grid v2.5.0
  *}
 
 <style>
-/* Emergency inline design system to bypass all theme caching */
+/* Emergency inline design system with reset rules to bypass theme overrides */
 .argsellers-container {
     width: 100% !important;
-    margin-bottom: 30px !important;
+    margin-bottom: 35px !important;
     box-sizing: border-box !important;
+    clear: both !important;
 }
 
 .argsellers-header-title {
@@ -198,25 +199,34 @@
     }
 }
 
+/* Photo Wrapper with Reset Bounds */
 .argseller-photo-wrapper {
-    width: 110px !important;
-    height: 110px !important;
+    width: 120px !important;
+    height: 120px !important;
+    max-width: 120px !important;
+    max-height: 120px !important;
+    min-width: 120px !important;
+    min-height: 120px !important;
     margin: 0 auto 8px !important;
     border-radius: 50% !important;
     overflow: hidden !important;
     border: 3px solid #f1f5f9 !important;
     box-shadow: 0 3px 8px rgba(0,0,0,0.08) !important;
+    box-sizing: border-box !important;
 }
 
 .argseller-photo-wrapper img {
     width: 100% !important;
     height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
     object-fit: cover !important;
     display: block !important;
+    border-radius: 50% !important;
 }
 
 .argseller-name {
-    font-size: 0.95rem !important;
+    font-size: 1rem !important;
     font-weight: 700 !important;
     color: #1e293b !important;
     margin-bottom: 2px !important;
@@ -224,7 +234,7 @@
 }
 
 .argseller-role {
-    font-size: 0.68rem !important;
+    font-size: 0.72rem !important;
     font-weight: 600 !important;
     color: #0284c7 !important;
     text-transform: uppercase !important;
