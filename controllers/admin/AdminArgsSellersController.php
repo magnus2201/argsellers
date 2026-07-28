@@ -1,7 +1,7 @@
 <?php
 /**
  * 2026 ARGSEGURIDAD
- * Admin controller for managing sellers in PrestaShop backoffice v2.7.0
+ * Admin controller for managing sellers in PrestaShop backoffice v2.7.3
  */
 
 require_once dirname(__FILE__) . '/../../classes/ArgsellerModel.php';
@@ -102,13 +102,7 @@ class AdminArgsSellersController extends ModuleAdminController
 
     public function postProcess()
     {
-        // Intercept AJAX action=ajaxUpdateModule for terminal console stream
-        if (Tools::getValue('action') === 'ajaxUpdateModule') {
-            $this->processAjaxUpdateModuleLog();
-            exit;
-        }
-
-        // Standard HTTP fallback update action
+        // Intercept action=updateModule from header toolbar or GET action
         if (Tools::getValue('action') === 'updateModule') {
             $this->processUpdateModule();
             return;
@@ -163,155 +157,6 @@ class AdminArgsSellersController extends ModuleAdminController
         return parent::postProcess();
     }
 
-    public function processAjaxUpdateModuleLog()
-    {
-        header('Content-Type: application/json');
-        $logs = array();
-
-        $logs[] = array('type' => 'info', 'text' => 'Iniciando proceso de actualización v2.7.0...');
-        
-        $github_repo = Configuration::get('ARGSELLERS_GITHUB_REPO');
-        if (!$github_repo) {
-            $github_repo = 'magnus2201/argsellers';
-        }
-        $logs[] = array('type' => 'info', 'text' => 'Repositorio GitHub: ' . $github_repo);
-
-        $github_token = Configuration::get('ARGSELLERS_GITHUB_TOKEN');
-        if (!empty($github_token)) {
-            $logs[] = array('type' => 'info', 'text' => 'Token de autenticación GitHub detectado.');
-        } else {
-            $logs[] = array('type' => 'info', 'text' => 'Modo descarga pública (sin token token GitHub).');
-        }
-
-        $urls_to_try = array(
-            'https://github.com/' . $github_repo . '/archive/refs/heads/main.zip',
-            'https://raw.githubusercontent.com/' . $github_repo . '/main/argsellers.zip'
-        );
-
-        $zip_file = _PS_MODULE_DIR_ . $this->module->name . '_temp_update.zip';
-        $file_downloaded = false;
-
-        foreach ($urls_to_try as $idx => $download_url) {
-            $logs[] = array('type' => 'info', 'text' => 'Probando URL (' . ($idx + 1) . '/' . count($urls_to_try) . '): ' . $download_url);
-
-            if (function_exists('curl_init')) {
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $download_url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater');
-
-                if (!empty($github_token)) {
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                        'Authorization: token ' . $github_token,
-                        'Accept: application/vnd.github.v3.raw'
-                    ));
-                }
-
-                $file_data = curl_exec($ch);
-                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $curl_err = curl_error($ch);
-                curl_close($ch);
-
-                $logs[] = array('type' => 'info', 'text' => 'Respuesta HTTP cURL: ' . $http_code . ' (Tamaño: ' . strlen($file_data) . ' bytes)');
-
-                if ($http_code == 200 && !empty($file_data) && strlen($file_data) > 500) {
-                    file_put_contents($zip_file, $file_data);
-                    $file_downloaded = true;
-                    $logs[] = array('type' => 'success', 'text' => '¡ZIP descargado correctamente desde cURL!');
-                    break;
-                } else if ($curl_err) {
-                    $logs[] = array('type' => 'error', 'text' => 'Error de cURL: ' . $curl_err);
-                }
-            }
-
-            if (!$file_downloaded) {
-                $logs[] = array('type' => 'warning', 'text' => 'Intentando descarga fallback via file_get_contents...');
-                $opts = array(
-                    'http' => array(
-                        'method' => 'GET',
-                        'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater\r\n" .
-                                    (!empty($github_token) ? "Authorization: token " . $github_token . "\r\n" : "")
-                    ),
-                    'ssl' => array(
-                        'verify_peer' => false,
-                        'verify_peer_name' => false
-                    )
-                );
-                $stream_data = @file_get_contents($download_url, false, stream_context_create($opts));
-                if (!empty($stream_data) && strlen($stream_data) > 500) {
-                    file_put_contents($zip_file, $stream_data);
-                    $file_downloaded = true;
-                    $logs[] = array('type' => 'success', 'text' => '¡ZIP descargado correctamente vía stream!');
-                    break;
-                } else {
-                    $logs[] = array('type' => 'error', 'text' => 'Fallo al obtener archivo desde ' . $download_url);
-                }
-            }
-        }
-
-        if (file_exists($zip_file) && class_exists('ZipArchive')) {
-            $logs[] = array('type' => 'info', 'text' => 'Abriendo archivo ZIP guardado...');
-            $zip = new ZipArchive();
-            if ($zip->open($zip_file) === true) {
-                $temp_extract = _PS_MODULE_DIR_ . $this->module->name . '_extracted_temp/';
-                if (!file_exists($temp_extract)) {
-                    mkdir($temp_extract, 0755, true);
-                }
-                $zip->extractTo($temp_extract);
-                $zip->close();
-                $logs[] = array('type' => 'info', 'text' => 'Descompresión ZIP completada en temporal.');
-
-                $subfolders = glob($temp_extract . '*', GLOB_ONLYDIR);
-                $source_dir = $temp_extract;
-                if (!empty($subfolders) && file_exists($subfolders[0] . '/argsellers.php')) {
-                    $source_dir = $subfolders[0] . '/';
-                    $logs[] = array('type' => 'info', 'text' => 'Directorio anidado detectado: ' . basename($subfolders[0]));
-                }
-
-                $logs[] = array('type' => 'info', 'text' => 'Copiando archivos al directorio del módulo...');
-                $this->rcopy($source_dir, _PS_MODULE_DIR_ . $this->module->name . '/');
-
-                Tools::deleteDirectory($temp_extract, true);
-                @unlink($zip_file);
-                $logs[] = array('type' => 'success', 'text' => '¡Archivos reemplazados exitosamente!');
-            } else {
-                $logs[] = array('type' => 'error', 'text' => 'No se pudo abrir el archivo ZIP descargado.');
-            }
-        }
-
-        // Run PrestaShop Native Upgrade Script
-        $logs[] = array('type' => 'info', 'text' => 'Ejecutando script de actualización de módulo PrestaShop (runUpgradeModule)...');
-        if (method_exists($this->module, 'runUpgradeModule')) {
-            $upgraded = $this->module->runUpgradeModule();
-            if ($upgraded) {
-                $logs[] = array('type' => 'success', 'text' => '¡Scripts upgrade/ ejecutados correctamente!');
-            }
-        }
-
-        // Cache purge
-        $logs[] = array('type' => 'info', 'text' => 'Limpiando cachés de Smarty, XML y Symfony...');
-        Tools::clearSmartyCache();
-        Tools::clearXMLCache();
-        Media::clearCache();
-
-        $cache_dir = _PS_ROOT_DIR_ . '/var/cache/';
-        if (file_exists($cache_dir)) {
-            Tools::deleteDirectory($cache_dir . 'dev/', false);
-            Tools::deleteDirectory($cache_dir . 'prod/', false);
-        }
-        $logs[] = array('type' => 'success', 'text' => '¡Caché purgada con éxito!');
-
-        if ($file_downloaded) {
-            $logs[] = array('type' => 'done', 'text' => '¡ACTUALIZACIÓN COMPLETADA CON ÉXITO A LA ÚLTIMA VERSIÓN!');
-        } else {
-            $logs[] = array('type' => 'warning', 'text' => 'No se pudo descargar de GitHub, pero se reinstalaron los archivos locales y se limpió la caché.');
-        }
-
-        echo json_encode(array('success' => true, 'logs' => $logs));
-    }
-
     public function processUpdateModule()
     {
         $github_repo = Configuration::get('ARGSELLERS_GITHUB_REPO');
@@ -321,6 +166,8 @@ class AdminArgsSellersController extends ModuleAdminController
         
         $github_token = Configuration::get('ARGSELLERS_GITHUB_TOKEN');
         
+        // Priority 1: GitHub Repository Archive ZIP URL
+        // Priority 2: Raw repository argsellers.zip URL
         $urls_to_try = array(
             'https://github.com/' . $github_repo . '/archive/refs/heads/main.zip',
             'https://raw.githubusercontent.com/' . $github_repo . '/main/argsellers.zip'
@@ -330,6 +177,7 @@ class AdminArgsSellersController extends ModuleAdminController
         $file_downloaded = false;
 
         foreach ($urls_to_try as $download_url) {
+            // 1. Try cURL fetch
             if (function_exists('curl_init')) {
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, $download_url);
@@ -356,6 +204,7 @@ class AdminArgsSellersController extends ModuleAdminController
                 }
             }
 
+            // 2. Fallback stream context fetch
             if (!$file_downloaded) {
                 $opts = array(
                     'http' => array(
@@ -377,6 +226,7 @@ class AdminArgsSellersController extends ModuleAdminController
             }
         }
 
+        // Extract and copy files cleanly
         if (file_exists($zip_file) && class_exists('ZipArchive')) {
             $zip = new ZipArchive();
             if ($zip->open($zip_file) === true) {
@@ -387,23 +237,28 @@ class AdminArgsSellersController extends ModuleAdminController
                 $zip->extractTo($temp_extract);
                 $zip->close();
 
+                // Locate source folder inside zip
                 $subfolders = glob($temp_extract . '*', GLOB_ONLYDIR);
                 $source_dir = $temp_extract;
                 if (!empty($subfolders) && file_exists($subfolders[0] . '/argsellers.php')) {
                     $source_dir = $subfolders[0] . '/';
                 }
 
+                // Copy files recursively into module directory
                 $this->rcopy($source_dir, _PS_MODULE_DIR_ . $this->module->name . '/');
 
+                // Cleanup temp directories & files
                 Tools::deleteDirectory($temp_extract, true);
                 @unlink($zip_file);
             }
         }
 
+        // Run PrestaShop Native Upgrade Script
         if (method_exists($this->module, 'runUpgradeModule')) {
             $this->module->runUpgradeModule();
         }
 
+        // Full PrestaShop & Symfony Cache Purge
         Tools::clearSmartyCache();
         Tools::clearXMLCache();
         Media::clearCache();
@@ -414,12 +269,13 @@ class AdminArgsSellersController extends ModuleAdminController
             Tools::deleteDirectory($cache_dir . 'prod/', false);
         }
 
+        // Keep confirmation message in session cookie for PrestaShop redirect
         if ($file_downloaded) {
             $msg = $this->l('¡Módulo actualizado con éxito desde GitHub (' . $github_repo . ') y toda la caché purgada!');
             $this->context->cookie->argsellers_conf = $msg;
             $this->confirmations[] = $msg;
         } else {
-            $msg = $this->l('Archivos locales del módulo aplicados y caché limpiada.');
+            $msg = $this->l('Archivos locales del módulo aplicados y caché limpiada. (Si el repo es privado, añade un Token Personal en Ajustes).');
             $this->context->cookie->argsellers_conf = $msg;
             $this->confirmations[] = $msg;
         }
@@ -434,87 +290,6 @@ class AdminArgsSellersController extends ModuleAdminController
             unset($this->context->cookie->argsellers_conf);
         }
         parent::initContent();
-
-        // Inject Console Log Modal in Backoffice UI
-        $ajax_url = self::$currentIndex . '&action=ajaxUpdateModule&ajax=1&token=' . $this->token;
-        $modal_html = '
-        <div id="argsellers-console-modal" class="modal fade" tabindex="-1" role="dialog" style="display:none;">
-            <div class="modal-dialog modal-lg" role="document" style="max-width: 800px; margin: 60px auto;">
-                <div class="modal-content" style="background: #0f172a; color: #f8fafc; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); font-family: monospace;">
-                    <div class="modal-header" style="border-bottom: 1px solid #334155; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;">
-                        <h4 class="modal-title" style="color: #38bdf8; font-weight: bold; margin: 0; font-size: 16px;">
-                            <i class="icon-terminal"></i> Consola de Actualización en Vivo - Gestor de Vendedores
-                        </h4>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #94a3b8; opacity: 1; font-size: 24px; background: none; border: none; cursor: pointer;">&times;</button>
-                    </div>
-                    <div class="modal-body" style="padding: 20px;">
-                        <div id="argsellers-console-output" style="height: 340px; overflow-y: auto; background: #020617; padding: 15px; border-radius: 8px; border: 1px solid #1e293b; font-size: 13px; line-height: 1.6;">
-                            <div style="color: #64748b;">Presiona "Iniciar Actualización" para comenzar el seguimiento en tiempo real...</div>
-                        </div>
-                    </div>
-                    <div class="modal-footer" style="border-top: 1px solid #334155; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-                        <span id="argsellers-console-status" style="font-size: 12px; color: #94a3b8;">Estado: Listo</span>
-                        <div>
-                            <button type="button" id="btn-start-console-update" class="btn btn-info" onclick="runConsoleUpdate();" style="background: #0284c7; border: none; border-radius: 6px; padding: 8px 16px; font-weight: bold;">
-                                <i class="icon-refresh"></i> Iniciar Actualización
-                            </button>
-                            <button type="button" class="btn btn-default" data-dismiss="modal" style="background: #334155; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; margin-left: 8px;" onclick="location.reload();">
-                                Cerrar y Recargar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <script type="text/javascript">
-            function openUpdateConsoleModal() {
-                $("#argsellers-console-modal").modal("show");
-            }
-
-            function runConsoleUpdate() {
-                var output = document.getElementById("argsellers-console-output");
-                var status = document.getElementById("argsellers-console-status");
-                var btn = document.getElementById("btn-start-console-update");
-                
-                btn.disabled = true;
-                btn.innerHTML = '<i class="icon-spinner icon-spin"></i> Actualizando...';
-                output.innerHTML = '<div style="color: #38bdf8;">[' + new Date().toLocaleTimeString() + '] Conectando con servidor PHP PrestaShop...</div>';
-                status.textContent = "Estado: Procesando descarga de GitHub...";
-
-                $.ajax({
-                    url: "' . $ajax_url . '",
-                    type: "POST",
-                    dataType: "json",
-                    success: function(res) {
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="icon-refresh"></i> Reintentar';
-                        status.textContent = "Estado: Proceso finalizado";
-
-                        if (res.success && res.logs) {
-                            res.logs.forEach(function(log) {
-                                var color = "#f8fafc";
-                                if (log.type === "success") color = "#4ade80";
-                                else if (log.type === "error") color = "#f87171";
-                                else if (log.type === "warning") color = "#fbbf24";
-                                else if (log.type === "done") color = "#38bdf8";
-
-                                var time = new Date().toLocaleTimeString();
-                                output.innerHTML += '<div style="color: ' + color + '; margin-bottom: 4px;">[' + time + '] ' + log.text + '</div>';
-                            });
-                            output.scrollTop = output.scrollHeight;
-                        }
-                    },
-                    error: function(xhr, textStatus, errorThrown) {
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="icon-refresh"></i> Reintentar';
-                        status.textContent = "Estado: Error de comunicación";
-                        output.innerHTML += '<div style="color: #f87171;">[' + new Date().toLocaleTimeString() + '] Error HTTP AJAX: ' + textStatus + ' - ' + errorThrown + '</div>';
-                    }
-                });
-            }
-        </script>';
-
-        $this->content .= $modal_html;
     }
 
     private function rcopy($src, $dst)
