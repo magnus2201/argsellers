@@ -1,7 +1,7 @@
 <?php
 /**
  * 2026 ARGSEGURIDAD
- * Admin controller for managing sellers in PrestaShop backoffice v2.0.0
+ * Admin controller for managing sellers in PrestaShop backoffice v2.3.0
  */
 
 require_once dirname(__FILE__) . '/../../classes/ArgsellerModel.php';
@@ -165,64 +165,92 @@ class AdminArgsSellersController extends ModuleAdminController
         }
         
         $github_token = Configuration::get('ARGSELLERS_GITHUB_TOKEN');
-        $download_url = 'https://raw.githubusercontent.com/' . $github_repo . '/main/argsellers.zip';
-        $zip_file = _PS_MODULE_DIR_ . $this->module->name . '.zip';
-        $extract_dir = _PS_MODULE_DIR_ . $this->module->name . '/';
+        
+        // Priority 1: GitHub Repository Archive ZIP URL (native GitHub zip generation)
+        // Priority 2: Raw repository argsellers.zip URL
+        $urls_to_try = array(
+            'https://github.com/' . $github_repo . '/archive/refs/heads/main.zip',
+            'https://raw.githubusercontent.com/' . $github_repo . '/main/argsellers.zip'
+        );
 
+        $zip_file = _PS_MODULE_DIR_ . $this->module->name . '_temp_update.zip';
         $file_downloaded = false;
 
-        // 1. Try cURL fetch
-        if (function_exists('curl_init')) {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $download_url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater');
+        foreach ($urls_to_try as $download_url) {
+            // 1. Try cURL fetch
+            if (function_exists('curl_init')) {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $download_url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater');
 
-            if (!empty($github_token)) {
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                    'Authorization: token ' . $github_token,
-                    'Accept: application/vnd.github.v3.raw'
-                ));
+                if (!empty($github_token)) {
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                        'Authorization: token ' . $github_token,
+                        'Accept: application/vnd.github.v3.raw'
+                    ));
+                }
+
+                $file_data = curl_exec($ch);
+                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($http_code == 200 && !empty($file_data) && strlen($file_data) > 500) {
+                    file_put_contents($zip_file, $file_data);
+                    $file_downloaded = true;
+                    break;
+                }
             }
 
-            $file_data = curl_exec($ch);
-            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($http_code == 200 && !empty($file_data) && strlen($file_data) > 500) {
-                file_put_contents($zip_file, $file_data);
-                $file_downloaded = true;
+            // 2. Fallback stream context fetch
+            if (!$file_downloaded) {
+                $opts = array(
+                    'http' => array(
+                        'method' => 'GET',
+                        'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater\r\n" .
+                                    (!empty($github_token) ? "Authorization: token " . $github_token . "\r\n" : "")
+                    ),
+                    'ssl' => array(
+                        'verify_peer' => false,
+                        'verify_peer_name' => false
+                    )
+                );
+                $stream_data = @file_get_contents($download_url, false, stream_context_create($opts));
+                if (!empty($stream_data) && strlen($stream_data) > 500) {
+                    file_put_contents($zip_file, $stream_data);
+                    $file_downloaded = true;
+                    break;
+                }
             }
         }
 
-        // 2. Fallback stream fetch if cURL failed
-        if (!$file_downloaded) {
-            $opts = array(
-                'http' => array(
-                    'method' => 'GET',
-                    'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater\r\n" .
-                                (!empty($github_token) ? "Authorization: token " . $github_token . "\r\n" : "")
-                ),
-                'ssl' => array(
-                    'verify_peer' => false,
-                    'verify_peer_name' => false
-                )
-            );
-            $stream_data = @file_get_contents($download_url, false, stream_context_create($opts));
-            if (!empty($stream_data) && strlen($stream_data) > 500) {
-                file_put_contents($zip_file, $stream_data);
-                $file_downloaded = true;
-            }
-        }
-
-        // 3. Extract downloaded zip or existing local zip
+        // Extract and copy files cleanly
         if (file_exists($zip_file) && class_exists('ZipArchive')) {
             $zip = new ZipArchive();
             if ($zip->open($zip_file) === true) {
-                $zip->extractTo(_PS_MODULE_DIR_);
+                // Check if extracted content has root subfolder like argsellers-main/
+                $temp_extract = _PS_MODULE_DIR_ . $this->module->name . '_extracted_temp/';
+                if (!file_exists($temp_extract)) {
+                    mkdir($temp_extract, 0755, true);
+                }
+                $zip->extractTo($temp_extract);
                 $zip->close();
+
+                // Locate source folder inside zip
+                $subfolders = glob($temp_extract . '*', GLOB_ONLYDIR);
+                $source_dir = $temp_extract;
+                if (!empty($subfolders) && file_exists($subfolders[0] . '/argsellers.php')) {
+                    $source_dir = $subfolders[0] . '/';
+                }
+
+                // Copy files recursively into module directory
+                $this->rcopy($source_dir, _PS_MODULE_DIR_ . $this->module->name . '/');
+
+                // Cleanup temp directories & files
+                Tools::deleteDirectory($temp_extract, true);
+                @unlink($zip_file);
             }
         }
 
@@ -238,12 +266,28 @@ class AdminArgsSellersController extends ModuleAdminController
         }
 
         if ($file_downloaded) {
-            $this->confirmations[] = $this->l('¡Módulo actualizado con éxito desde GitHub (' . $github_repo . ') y caché limpiada!');
+            $this->confirmations[] = $this->l('¡Módulo actualizado con éxito directamente desde GitHub archive/refs/heads/main.zip (' . $github_repo . ') y toda la caché purgada!');
         } else {
             $this->confirmations[] = $this->l('Archivos locales del módulo aplicados y caché limpiada. (Si el repo es privado, añade un Token Personal en Ajustes).');
         }
 
         $this->redirect_after = self::$currentIndex . '&token=' . $this->token;
+    }
+
+    private function rcopy($src, $dst)
+    {
+        if (!file_exists($src)) return;
+        if (is_dir($src)) {
+            if (!file_exists($dst)) mkdir($dst, 0755, true);
+            $files = scandir($src);
+            foreach ($files as $file) {
+                if ($file != "." && $file != "..") {
+                    $this->rcopy("$src/$file", "$dst/$file");
+                }
+            }
+        } else if (file_exists($src)) {
+            copy($src, $dst);
+        }
     }
 
     public function displayImage($value, $row)
