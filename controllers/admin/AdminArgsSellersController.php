@@ -102,7 +102,7 @@ class AdminArgsSellersController extends ModuleAdminController
 
     public function postProcess()
     {
-        // Intercept action=updateModule from header toolbar
+        // Intercept action=updateModule from header toolbar or GET action
         if (Tools::getValue('action') === 'updateModule') {
             $this->processUpdateModule();
             return;
@@ -166,7 +166,7 @@ class AdminArgsSellersController extends ModuleAdminController
         
         $github_token = Configuration::get('ARGSELLERS_GITHUB_TOKEN');
         
-        // Priority 1: GitHub Repository Archive ZIP URL (native GitHub zip generation)
+        // Priority 1: GitHub Repository Archive ZIP URL
         // Priority 2: Raw repository argsellers.zip URL
         $urls_to_try = array(
             'https://github.com/' . $github_repo . '/archive/refs/heads/main.zip',
@@ -230,7 +230,6 @@ class AdminArgsSellersController extends ModuleAdminController
         if (file_exists($zip_file) && class_exists('ZipArchive')) {
             $zip = new ZipArchive();
             if ($zip->open($zip_file) === true) {
-                // Check if extracted content has root subfolder like argsellers-main/
                 $temp_extract = _PS_MODULE_DIR_ . $this->module->name . '_extracted_temp/';
                 if (!file_exists($temp_extract)) {
                     mkdir($temp_extract, 0755, true);
@@ -265,13 +264,27 @@ class AdminArgsSellersController extends ModuleAdminController
             Tools::deleteDirectory($cache_dir . 'prod/', false);
         }
 
+        // Keep confirmation message in session cookie for PrestaShop redirect
         if ($file_downloaded) {
-            $this->confirmations[] = $this->l('¡Módulo actualizado con éxito directamente desde GitHub archive/refs/heads/main.zip (' . $github_repo . ') y toda la caché purgada!');
+            $msg = $this->l('¡Módulo actualizado con éxito desde GitHub (' . $github_repo . ') y toda la caché purgada!');
+            $this->context->cookie->argsellers_conf = $msg;
+            $this->confirmations[] = $msg;
         } else {
-            $this->confirmations[] = $this->l('Archivos locales del módulo aplicados y caché limpiada. (Si el repo es privado, añade un Token Personal en Ajustes).');
+            $msg = $this->l('Archivos locales del módulo aplicados y caché limpiada. (Si el repo es privado, añade un Token Personal en Ajustes).');
+            $this->context->cookie->argsellers_conf = $msg;
+            $this->confirmations[] = $msg;
         }
 
-        $this->redirect_after = self::$currentIndex . '&token=' . $this->token;
+        Tools::redirectAdmin(self::$currentIndex . '&conf=4&token=' . $this->token);
+    }
+
+    public function initContent()
+    {
+        if (isset($this->context->cookie->argsellers_conf)) {
+            $this->confirmations[] = $this->context->cookie->argsellers_conf;
+            unset($this->context->cookie->argsellers_conf);
+        }
+        parent::initContent();
     }
 
     private function rcopy($src, $dst)
