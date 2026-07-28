@@ -1,12 +1,12 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v1.9.0
+ * Smarty template for rendering sellers grid v2.0.0
  *}
 
 <div class="argsellers-container">
-    {* Header Title styled matching 'PRINCIPALES MARCAS' *}
+    {* Header Title styled matching 'PRINCIPALES MARCAS' & 'SISTEMAS COMPLETOS' *}
     <div class="argsellers-header-title">
-        <span class="argsellers-title-light">ASESORES</span> <span class="argsellers-title-bold">COMERCIALES</span>
+        <span class="argseller-title-light">ASESORES</span> <span class="argseller-title-bold">COMERCIALES</span>
     </div>
 
     <div class="argsellers-grid">
