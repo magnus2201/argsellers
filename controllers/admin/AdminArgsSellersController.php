@@ -1,7 +1,7 @@
 <?php
 /**
  * 2026 ARGSEGURIDAD
- * Admin controller for managing sellers in PrestaShop backoffice v1.9.0
+ * Admin controller for managing sellers in PrestaShop backoffice v2.0.0
  */
 
 require_once dirname(__FILE__) . '/../../classes/ArgsellerModel.php';
@@ -100,6 +100,63 @@ class AdminArgsSellersController extends ModuleAdminController
         );
     }
 
+    public function postProcess()
+    {
+        // Intercept action=updateModule from header toolbar
+        if (Tools::getValue('action') === 'updateModule') {
+            $this->processUpdateModule();
+            return;
+        }
+
+        if (Tools::isSubmit('submitAdd' . $this->table)) {
+            $selected_sectors = Tools::getValue('sectors_selected');
+            if (is_array($selected_sectors) && !empty($selected_sectors)) {
+                $_POST['role'] = implode(' / ', $selected_sectors);
+            } else {
+                $_POST['role'] = 'General';
+            }
+
+            $phone_input = Tools::getValue('phone_input');
+            $_POST['phone'] = preg_replace('/[^0-9]/', '', $phone_input);
+
+            $email_input = trim(Tools::getValue('email_user_input'));
+            $email_suffix = Configuration::get('ARGSELLERS_EMAIL_SUFFIX');
+            if (!$email_suffix) $email_suffix = '@argseguridad.com';
+
+            if (strpos($email_input, '@') === false) {
+                $_POST['email'] = $email_input . $email_suffix;
+            } else {
+                $_POST['email'] = $email_input;
+            }
+
+            if (isset($_FILES['image']) && !empty($_FILES['image']['tmp_name'])) {
+                $extension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+                $allowed = array('jpg', 'jpeg', 'png', 'webp', 'gif');
+
+                if (in_array($extension, $allowed)) {
+                    $filename = uniqid('profile_') . '.' . $extension;
+                    $destination = _PS_MODULE_DIR_ . $this->module->name . '/views/img/' . $filename;
+
+                    if (move_uploaded_file($_FILES['image']['tmp_name'], $destination)) {
+                        $id_seller = (int)Tools::getValue('id_seller');
+                        if ($id_seller) {
+                            $seller = new ArgsellerModel($id_seller);
+                            if ($seller->image && file_exists(_PS_MODULE_DIR_ . $this->module->name . '/views/img/' . $seller->image)) {
+                                @unlink(_PS_MODULE_DIR_ . $this->module->name . '/views/img/' . $seller->image);
+                            }
+                        }
+                        $_POST['image'] = $filename;
+                    } else {
+                        $this->errors[] = $this->l('Error al guardar la foto de perfil en el servidor.');
+                    }
+                } else {
+                    $this->errors[] = $this->l('Formato de imagen no válido. Solo se permiten JPG, PNG, WEBP o GIF.');
+                }
+            }
+        }
+        return parent::postProcess();
+    }
+
     public function processUpdateModule()
     {
         $github_repo = Configuration::get('ARGSELLERS_GITHUB_REPO');
@@ -140,7 +197,7 @@ class AdminArgsSellersController extends ModuleAdminController
             }
         }
 
-        // 2. Fallback stream fetch if cURL failed or was restricted
+        // 2. Fallback stream fetch if cURL failed
         if (!$file_downloaded) {
             $opts = array(
                 'http' => array(
@@ -164,7 +221,6 @@ class AdminArgsSellersController extends ModuleAdminController
         if (file_exists($zip_file) && class_exists('ZipArchive')) {
             $zip = new ZipArchive();
             if ($zip->open($zip_file) === true) {
-                // Remove existing views and files to prevent stale cached templates
                 $zip->extractTo(_PS_MODULE_DIR_);
                 $zip->close();
             }
@@ -409,57 +465,6 @@ class AdminArgsSellersController extends ModuleAdminController
         $this->fields_value['email_user_input'] = $clean_email_user;
 
         return parent::renderForm();
-    }
-
-    public function postProcess()
-    {
-        if (Tools::isSubmit('submitAdd' . $this->table)) {
-            $selected_sectors = Tools::getValue('sectors_selected');
-            if (is_array($selected_sectors) && !empty($selected_sectors)) {
-                $_POST['role'] = implode(' / ', $selected_sectors);
-            } else {
-                $_POST['role'] = 'General';
-            }
-
-            $phone_input = Tools::getValue('phone_input');
-            $_POST['phone'] = preg_replace('/[^0-9]/', '', $phone_input);
-
-            $email_input = trim(Tools::getValue('email_user_input'));
-            $email_suffix = Configuration::get('ARGSELLERS_EMAIL_SUFFIX');
-            if (!$email_suffix) $email_suffix = '@argseguridad.com';
-
-            if (strpos($email_input, '@') === false) {
-                $_POST['email'] = $email_input . $email_suffix;
-            } else {
-                $_POST['email'] = $email_input;
-            }
-
-            if (isset($_FILES['image']) && !empty($_FILES['image']['tmp_name'])) {
-                $extension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-                $allowed = array('jpg', 'jpeg', 'png', 'webp', 'gif');
-
-                if (in_array($extension, $allowed)) {
-                    $filename = uniqid('profile_') . '.' . $extension;
-                    $destination = _PS_MODULE_DIR_ . $this->module->name . '/views/img/' . $filename;
-
-                    if (move_uploaded_file($_FILES['image']['tmp_name'], $destination)) {
-                        $id_seller = (int)Tools::getValue('id_seller');
-                        if ($id_seller) {
-                            $seller = new ArgsellerModel($id_seller);
-                            if ($seller->image && file_exists(_PS_MODULE_DIR_ . $this->module->name . '/views/img/' . $seller->image)) {
-                                @unlink(_PS_MODULE_DIR_ . $this->module->name . '/views/img/' . $seller->image);
-                            }
-                        }
-                        $_POST['image'] = $filename;
-                    } else {
-                        $this->errors[] = $this->l('Error al guardar la foto de perfil en el servidor.');
-                    }
-                } else {
-                    $this->errors[] = $this->l('Formato de imagen no válido. Solo se permiten JPG, PNG, WEBP o GIF.');
-                }
-            }
-        }
-        return parent::postProcess();
     }
 
     public function ajaxProcessUpdatePositions()
