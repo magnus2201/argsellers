@@ -1,150 +1,105 @@
 /**
  * 2026 ARGSEGURIDAD
- * Frontend stylesheet for argsellers module v1.5.0
+ * Frontend stylesheet for argsellers module v1.8.0
  */
 
 .argsellers-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-right: -10px;
-    margin-left: -10px;
-    position: relative;
-    z-index: 1;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    margin-right: -4px !important;
+    margin-left: -4px !important;
+    position: relative !important;
+    z-index: 1 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 .argseller-col {
-    position: relative;
-    width: 100%;
-    padding-right: 8px;
-    padding-left: 8px;
-    margin-bottom: 30px;
-    box-sizing: border-box;
-    z-index: 1;
+    position: relative !important;
+    width: 100% !important;
+    padding-right: 3px !important;
+    padding-left: 3px !important;
+    margin-bottom: 20px !important;
+    box-sizing: border-box !important;
+    z-index: 1 !important;
 }
 
-/* Ensure hover column rises above subsequent rows */
 .argseller-col:hover {
-    z-index: 999 !important;
+    z-index: 9999 !important;
 }
 
-/* PC / Desktop Viewport (6 in 1 Row) */
-@media (min-width: 1024px) {
+/* PC / Desktop Viewport (Force 6 in 1 Row) */
+@media (min-width: 992px) {
     .argseller-col {
-        flex: 0 0 16.666667%;
-        max-width: 16.666667%;
+        flex: 0 0 16.666667% !important;
+        max-width: 16.666667% !important;
+        width: 16.666667% !important;
     }
 
     .argseller-card {
-        position: relative;
-        background: #fff;
-        border-radius: 12px;
-        padding: 15px 10px;
-        text-align: center;
-        transition: all 0.25s ease-in-out;
-        z-index: 10;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        position: relative !important;
+        background: #ffffff !important;
+        border-radius: 10px !important;
+        padding: 10px 4px !important;
+        text-align: center !important;
+        transition: all 0.2s ease-in-out !important;
+        z-index: 10 !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
     }
 
     .argseller-card:hover {
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-        transform: translateY(-4px);
-        z-index: 9999 !important;
+        box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15) !important;
+        transform: translateY(-3px) !important;
+        z-index: 99999 !important;
     }
 
-    /* Hover Dropdown Details */
     .argseller-hover-info {
-        opacity: 0;
-        visibility: hidden;
-        position: absolute;
-        top: 100%;
-        left: -10px;
-        right: -10px;
-        background: #fff;
-        border-radius: 0 0 12px 12px;
-        padding: 15px 12px 20px 12px;
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.18);
-        transform: translateY(-10px);
-        transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
-                    transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
-                    visibility 0.3s;
-        z-index: 99999 !important;
-        box-sizing: border-box;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        position: absolute !important;
+        top: 100% !important;
+        left: -15px !important;
+        right: -15px !important;
+        background: #ffffff !important;
+        border-radius: 0 0 12px 12px !important;
+        padding: 12px 10px 16px 10px !important;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.18) !important;
+        transform: translateY(-8px) !important;
+        transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s !important;
+        z-index: 999999 !important;
+        box-sizing: border-box !important;
     }
 
     .argseller-card:hover .argseller-hover-info {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: translateY(0) !important;
     }
 
     .argseller-mobile-buttons {
-        display: none;
+        display: none !important;
     }
     
     .argseller-desktop-only {
-        display: block;
+        display: block !important;
     }
 }
 
 /* Tablet Viewport */
-@media (max-width: 1023px) and (min-width: 768px) {
+@media (max-width: 991px) and (min-width: 768px) {
     .argseller-col {
-        flex: 0 0 33.333333%;
-        max-width: 33.333333%;
-        margin-bottom: 25px;
+        flex: 0 0 33.333333% !important;
+        max-width: 33.333333% !important;
+        margin-bottom: 20px !important;
     }
     
     .argseller-card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 15px;
-        text-align: center;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-
-    .argseller-hover-info {
-        display: block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        position: relative !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        transform: none !important;
-        box-shadow: none !important;
-        padding: 12px 0 0 0 !important;
-    }
-
-    .argseller-qr {
-        display: none !important;
-    }
-
-    .argseller-desktop-only {
-        display: none !important;
-    }
-
-    .argseller-mobile-buttons {
-        display: block !important;
-    }
-}
-
-/* Mobile Viewport */
-@media (max-width: 767px) {
-    .argseller-col {
-        flex: 0 0 50%;
-        max-width: 50%;
-        padding-right: 6px;
-        padding-left: 6px;
-        margin-bottom: 20px;
-    }
-
-    .argseller-card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 12px 8px;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        background: #fff !important;
+        border-radius: 10px !important;
+        padding: 12px 8px !important;
+        text-align: center !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
     }
 
     .argseller-hover-info {
@@ -160,11 +115,47 @@
         padding: 10px 0 0 0 !important;
     }
 
-    .argseller-qr {
+    .argseller-qr, .argseller-desktop-only {
         display: none !important;
     }
 
-    .argseller-desktop-only {
+    .argseller-mobile-buttons {
+        display: block !important;
+    }
+}
+
+/* Mobile Viewport */
+@media (max-width: 767px) {
+    .argseller-col {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        padding-right: 4px !important;
+        padding-left: 4px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .argseller-card {
+        background: #fff !important;
+        border-radius: 10px !important;
+        padding: 10px 6px !important;
+        text-align: center !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .argseller-hover-info {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: relative !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+        box-shadow: none !important;
+        padding: 8px 0 0 0 !important;
+    }
+
+    .argseller-qr, .argseller-desktop-only {
         display: none !important;
     }
 
@@ -175,126 +166,126 @@
 
 /* Card Elements Styles */
 .argseller-photo-wrapper {
-    width: 150px;
-    height: 150px;
-    margin: 0 auto 12px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 3px solid #f1f5f9;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    width: 125px !important;
+    height: 125px !important;
+    margin: 0 auto 8px !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    border: 3px solid #f1f5f9 !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08) !important;
 }
 
 .argseller-photo-wrapper img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
 }
 
 .argseller-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 3px;
-    line-height: 1.2;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    margin-bottom: 2px !important;
+    line-height: 1.2 !important;
 }
 
 .argseller-role {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #0284c7;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 10px;
-    line-height: 1.3;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #0284c7 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+    margin-bottom: 6px !important;
+    line-height: 1.2 !important;
 }
 
 .argseller-qr {
-    width: 130px;
-    height: 130px;
-    margin: 0 auto 12px;
-    border: 1px solid #e2e8f0;
-    padding: 5px;
-    border-radius: 8px;
-    background: #fff;
+    width: 120px !important;
+    height: 120px !important;
+    margin: 0 auto 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 8px !important;
+    background: #fff !important;
 }
 
 .argseller-qr img {
-    width: 100%;
-    height: 100%;
-    display: block;
-    object-fit: contain;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    object-fit: contain !important;
 }
 
 .argseller-phone-text {
-    font-size: 0.82rem;
-    color: #475569;
-    margin-bottom: 10px;
-    font-weight: 600;
+    font-size: 0.8rem !important;
+    color: #475569 !important;
+    margin-bottom: 8px !important;
+    font-weight: 600 !important;
 }
 
 .argseller-email-text {
-    font-size: 0.78rem;
-    color: #64748b;
-    margin-top: 8px;
-    word-break: break-all;
-    font-weight: 500;
+    font-size: 0.75rem !important;
+    color: #64748b !important;
+    margin-top: 6px !important;
+    word-break: break-all !important;
+    font-weight: 500 !important;
 }
 
 /* Action Buttons */
 .btn-argseller-whatsapp {
-    background-color: #25d366;
+    background-color: #25d366 !important;
     color: #ffffff !important;
-    border-radius: 20px;
-    padding: 8px 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
+    border-radius: 20px !important;
+    padding: 7px 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 600 !important;
     text-decoration: none !important;
-    margin-bottom: 8px;
-    width: 100%;
-    font-size: 0.85rem;
-    border: none;
-    transition: background-color 0.2s ease;
-    box-sizing: border-box;
-    cursor: pointer;
+    margin-bottom: 6px !important;
+    width: 100% !important;
+    font-size: 0.82rem !important;
+    border: none !important;
+    transition: background-color 0.2s ease !important;
+    box-sizing: border-box !important;
+    cursor: pointer !important;
 }
 
 .btn-argseller-whatsapp:hover {
-    background-color: #20ba54;
+    background-color: #20ba54 !important;
     color: #ffffff !important;
 }
 
 .btn-argseller-whatsapp i {
-    margin-right: 6px;
-    font-size: 1.05rem;
+    margin-right: 5px !important;
+    font-size: 1rem !important;
 }
 
 .btn-argseller-mail {
-    background-color: #ffffff;
+    background-color: #ffffff !important;
     color: #ef4444 !important;
-    border: 1px solid #ef4444;
-    border-radius: 20px;
-    padding: 7px 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
+    border: 1px solid #ef4444 !important;
+    border-radius: 20px !important;
+    padding: 6px 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 600 !important;
     text-decoration: none !important;
-    width: 100%;
-    font-size: 0.85rem;
-    transition: all 0.2s ease;
-    box-sizing: border-box;
-    cursor: pointer;
+    width: 100% !important;
+    font-size: 0.82rem !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+    cursor: pointer !important;
 }
 
 .btn-argseller-mail:hover {
-    background-color: #ef4444;
+    background-color: #ef4444 !important;
     color: #ffffff !important;
 }
 
 .btn-argseller-mail i {
-    margin-right: 6px;
-    font-size: 0.95rem;
+    margin-right: 5px !important;
+    font-size: 0.9rem !important;
 }
