@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '2.6.0';
+        $this->version = '2.6.1';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -358,9 +358,9 @@ class Argsellers extends Module
     public function runUpgradeModule()
     {
         if (class_exists('Module')) {
-            include_once(_PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-2.6.0.php');
-            if (function_exists('upgrade_module_2_6_0')) {
-                return upgrade_module_2_6_0($this);
+            include_once(_PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-2.6.1.php');
+            if (function_exists('upgrade_module_2_6_1')) {
+                return upgrade_module_2_6_1($this);
             }
         }
         return true;
