@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '2.3.0';
+        $this->version = '2.3.1';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -248,9 +248,11 @@ class Argsellers extends Module
 
     public function hookDisplayHeader()
     {
+        // Cache busting parameter for CSS asset registration
+        $css_uri = 'modules/' . $this->name . '/views/css/front.css?v=' . $this->version;
         $this->context->controller->registerStylesheet(
             'modules-argsellers-front',
-            'modules/' . $this->name . '/views/css/front.css',
+            $css_uri,
             array('media' => 'all', 'priority' => 150)
         );
 
