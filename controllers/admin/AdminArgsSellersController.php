@@ -85,13 +85,11 @@ class AdminArgsSellersController extends ModuleAdminController
     {
         parent::initPageHeaderToolbar();
 
-        // 1-Click Update Module button with AJAX Console Modal trigger
+        // 1-Click Update Module button
         $this->page_header_toolbar_btn['update_module'] = array(
-            'href' => 'javascript:void(0);',
+            'href' => self::$currentIndex . '&action=updateModule&token=' . $this->token,
             'desc' => $this->l('Actualizar Módulo'),
             'icon' => 'process-icon-refresh icon-cloud-upload',
-            'js' => 'openUpdateConsoleModal();',
-            'onclick' => 'openUpdateConsoleModal(); return false;'
         );
 
         // Global Settings button
@@ -479,8 +477,8 @@ class AdminArgsSellersController extends ModuleAdminController
                 var btn = document.getElementById("btn-start-console-update");
                 
                 btn.disabled = true;
-                btn.innerHTML = "<i class=\"icon-spinner icon-spin\"></i> Actualizando...";
-                output.innerHTML = "<div style=\"color: #38bdf8;\">[' + new Date().toLocaleTimeString() + '] Conectando con servidor PHP PrestaShop...</div>";
+                btn.innerHTML = '<i class="icon-spinner icon-spin"></i> Actualizando...';
+                output.innerHTML = '<div style="color: #38bdf8;">[' + new Date().toLocaleTimeString() + '] Conectando con servidor PHP PrestaShop...</div>';
                 status.textContent = "Estado: Procesando descarga de GitHub...";
 
                 $.ajax({
@@ -489,7 +487,7 @@ class AdminArgsSellersController extends ModuleAdminController
                     dataType: "json",
                     success: function(res) {
                         btn.disabled = false;
-                        btn.innerHTML = "<i class=\"icon-refresh\"></i> Reintentar";
+                        btn.innerHTML = '<i class="icon-refresh"></i> Reintentar';
                         status.textContent = "Estado: Proceso finalizado";
 
                         if (res.success && res.logs) {
@@ -501,16 +499,16 @@ class AdminArgsSellersController extends ModuleAdminController
                                 else if (log.type === "done") color = "#38bdf8";
 
                                 var time = new Date().toLocaleTimeString();
-                                output.innerHTML += "<div style=\"color: " + color + "; margin-bottom: 4px;\">[" + time + "] " + log.text + "</div>";
+                                output.innerHTML += '<div style="color: ' + color + '; margin-bottom: 4px;">[' + time + '] ' + log.text + '</div>';
                             });
                             output.scrollTop = output.scrollHeight;
                         }
                     },
                     error: function(xhr, textStatus, errorThrown) {
                         btn.disabled = false;
-                        btn.innerHTML = "<i class=\"icon-refresh\"></i> Reintentar";
+                        btn.innerHTML = '<i class="icon-refresh"></i> Reintentar';
                         status.textContent = "Estado: Error de comunicación";
-                        output.innerHTML += "<div style=\"color: #f87171;\">[' + new Date().toLocaleTimeString() + '] Error HTTP AJAX: " + textStatus + " - " + errorThrown + "</div>";
+                        output.innerHTML += '<div style="color: #f87171;">[' + new Date().toLocaleTimeString() + '] Error HTTP AJAX: ' + textStatus + ' - ' + errorThrown + '</div>';
                     }
                 });
             }
