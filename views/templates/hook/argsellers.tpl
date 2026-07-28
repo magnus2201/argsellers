@@ -78,12 +78,13 @@
         position: relative !important;
         background: #ffffff !important;
         border-radius: 12px !important;
-        padding: 10px 4px !important;
+        padding: 14px 6px 10px 6px !important;
         text-align: center !important;
         transition: all 0.2s ease-in-out !important;
         z-index: 10 !important;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
         box-sizing: border-box !important;
+        isolation: isolate !important;
     }
 
     .argseller-card:hover {
@@ -94,7 +95,7 @@
         z-index: 99999 !important;
     }
 
-    /* Dropdown hover info matching exact card width, rounded bottom corners, and covering parent card */
+    /* Dropdown: fondo blanco solido, sin transparencia */
     .argseller-hover-info {
         opacity: 0 !important;
         visibility: hidden !important;
@@ -103,6 +104,7 @@
         left: 0 !important;
         right: 0 !important;
         width: 100% !important;
+        background-color: #ffffff !important;
         background: #ffffff !important;
         border-radius: 0 0 12px 12px !important;
         padding: 12px 10px 16px 10px !important;
@@ -111,6 +113,7 @@
         transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s !important;
         z-index: 999999 !important;
         box-sizing: border-box !important;
+        isolation: isolate !important;
     }
 
     .argseller-card:hover .argseller-hover-info {
@@ -208,13 +211,13 @@
 
 /* Photo Wrapper with Reset Bounds */
 .argseller-photo-wrapper {
-    width: 110px !important;
-    height: 110px !important;
-    max-width: 110px !important;
-    max-height: 110px !important;
-    min-width: 110px !important;
-    min-height: 110px !important;
-    margin: 0 auto 8px !important;
+    width: 130px !important;
+    height: 130px !important;
+    max-width: 130px !important;
+    max-height: 130px !important;
+    min-width: 130px !important;
+    min-height: 130px !important;
+    margin: 0 auto 10px !important;
     border-radius: 50% !important;
     overflow: hidden !important;
     border: 3px solid #f1f5f9 !important;
@@ -233,15 +236,15 @@
 }
 
 .argseller-name {
-    font-size: 0.95rem !important;
+    font-size: 1.05rem !important;
     font-weight: 700 !important;
     color: #1e293b !important;
-    margin-bottom: 2px !important;
+    margin-bottom: 3px !important;
     line-height: 1.2 !important;
 }
 
 .argseller-role {
-    font-size: 0.68rem !important;
+    font-size: 0.78rem !important;
     font-weight: 600 !important;
     color: #0284c7 !important;
     text-transform: uppercase !important;
@@ -268,14 +271,14 @@
 }
 
 .argseller-phone-text {
-    font-size: 0.75rem !important;
+    font-size: 0.85rem !important;
     color: #475569 !important;
     margin-bottom: 8px !important;
     font-weight: 600 !important;
 }
 
 .argseller-email-text {
-    font-size: 0.7rem !important;
+    font-size: 0.78rem !important;
     color: #64748b !important;
     margin-top: 6px !important;
     word-break: break-all !important;
