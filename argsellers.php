@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '2.7.5';
+        $this->version = '2.7.6';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;

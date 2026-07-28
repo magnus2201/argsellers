@@ -165,6 +165,9 @@ class AdminArgsSellersController extends ModuleAdminController
         }
         
         $github_token = Configuration::get('ARGSELLERS_GITHUB_TOKEN');
+
+        // Version before update
+        $version_before = $this->module->version;
         
         // Priority 1: GitHub Repository Archive ZIP URL
         // Priority 2: Raw repository argsellers.zip URL
@@ -175,6 +178,8 @@ class AdminArgsSellersController extends ModuleAdminController
 
         $zip_file = _PS_MODULE_DIR_ . $this->module->name . '_temp_update.zip';
         $file_downloaded = false;
+        $download_error = '';
+        $last_http_code = 0;
 
         foreach ($urls_to_try as $download_url) {
             // 1. Try cURL fetch
@@ -184,6 +189,7 @@ class AdminArgsSellersController extends ModuleAdminController
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
                 curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater');
 
                 if (!empty($github_token)) {
@@ -194,14 +200,19 @@ class AdminArgsSellersController extends ModuleAdminController
                 }
 
                 $file_data = curl_exec($ch);
-                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curl_error = curl_error($ch);
+                $last_http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
 
-                if ($http_code == 200 && !empty($file_data) && strlen($file_data) > 500) {
+                if ($last_http_code == 200 && !empty($file_data) && strlen($file_data) > 500) {
                     file_put_contents($zip_file, $file_data);
                     $file_downloaded = true;
                     break;
+                } else {
+                    $download_error = $curl_error ? $curl_error : 'HTTP ' . $last_http_code;
                 }
+            } else {
+                $download_error = 'cURL no disponible en el servidor';
             }
 
             // 2. Fallback stream context fetch
@@ -210,7 +221,8 @@ class AdminArgsSellersController extends ModuleAdminController
                     'http' => array(
                         'method' => 'GET',
                         'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrestaShop-Updater\r\n" .
-                                    (!empty($github_token) ? "Authorization: token " . $github_token . "\r\n" : "")
+                                    (!empty($github_token) ? "Authorization: token " . $github_token . "\r\n" : ""),
+                        'timeout' => 30
                     ),
                     'ssl' => array(
                         'verify_peer' => false,
@@ -222,11 +234,14 @@ class AdminArgsSellersController extends ModuleAdminController
                     file_put_contents($zip_file, $stream_data);
                     $file_downloaded = true;
                     break;
+                } else {
+                    $download_error = 'Stream fetch failed';
                 }
             }
         }
 
         // Extract and copy files cleanly
+        $version_after = $version_before;
         if (file_exists($zip_file) && class_exists('ZipArchive')) {
             $zip = new ZipArchive();
             if ($zip->open($zip_file) === true) {
@@ -242,6 +257,15 @@ class AdminArgsSellersController extends ModuleAdminController
                 $source_dir = $temp_extract;
                 if (!empty($subfolders) && file_exists($subfolders[0] . '/argsellers.php')) {
                     $source_dir = $subfolders[0] . '/';
+                }
+
+                // Try to read new version BEFORE overwriting
+                $new_module_file = $source_dir . 'argsellers.php';
+                if (file_exists($new_module_file)) {
+                    $new_content = file_get_contents($new_module_file);
+                    if (preg_match("/\\\$this->version\s*=\s*'([^']+)'/", $new_content, $matches)) {
+                        $version_after = $matches[1];
+                    }
                 }
 
                 // Copy files recursively into module directory
@@ -269,13 +293,13 @@ class AdminArgsSellersController extends ModuleAdminController
 
         // Keep confirmation message in session cookie for PrestaShop redirect
         if ($file_downloaded) {
-            $msg = $this->l('¡Módulo actualizado con éxito desde GitHub (' . $github_repo . ') y toda la caché purgada!');
+            $msg = 'Modulo actualizado desde GitHub (' . $github_repo . '). Version: v' . $version_before . ' -> v' . $version_after . '. Cache purgada.';
             $this->context->cookie->argsellers_conf = $msg;
-            $this->confirmations[] = $msg;
+            $this->context->cookie->argsellers_conf_type = 'success';
         } else {
-            $msg = $this->l('Archivos locales del módulo aplicados y caché limpiada. (Si el repo es privado, añade un Token Personal en Ajustes).');
+            $msg = 'ADVERTENCIA: No se pudo descargar desde GitHub. Error: [' . $download_error . ']. Version instalada: v' . $version_before . '. Cache actualizada.';
             $this->context->cookie->argsellers_conf = $msg;
-            $this->confirmations[] = $msg;
+            $this->context->cookie->argsellers_conf_type = 'warning';
         }
 
         Tools::redirectAdmin(self::$currentIndex . '&conf=4&token=' . $this->token);
@@ -284,8 +308,14 @@ class AdminArgsSellersController extends ModuleAdminController
     public function initContent()
     {
         if (isset($this->context->cookie->argsellers_conf)) {
-            $this->confirmations[] = $this->context->cookie->argsellers_conf;
+            $type = isset($this->context->cookie->argsellers_conf_type) ? $this->context->cookie->argsellers_conf_type : 'success';
+            if ($type === 'warning') {
+                $this->warnings[] = $this->context->cookie->argsellers_conf;
+            } else {
+                $this->confirmations[] = $this->context->cookie->argsellers_conf;
+            }
             unset($this->context->cookie->argsellers_conf);
+            unset($this->context->cookie->argsellers_conf_type);
         }
         parent::initContent();
     }
