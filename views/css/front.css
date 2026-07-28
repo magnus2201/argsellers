@@ -1,6 +1,6 @@
 /**
  * 2026 ARGSEGURIDAD
- * Frontend stylesheet for argsellers module v2.2.0
+ * Frontend stylesheet for argsellers module v2.3.0
  */
 
 .argsellers-container {
@@ -34,7 +34,7 @@
     z-index: 9999 !important;
 }
 
-/* PC / Desktop Viewport (Force 12% Column Width and strict inline-flex 1 row) */
+/* PC / Desktop Viewport (Force 16.666667% Column Width for 6 per row) */
 @media (min-width: 992px) {
     .argsellers-grid {
         flex-wrap: nowrap !important;
@@ -42,9 +42,9 @@
     }
 
     .argseller-col {
-        flex: 0 0 12% !important;
-        max-width: 12% !important;
-        width: 12% !important;
+        flex: 0 0 16.666667% !important;
+        max-width: 16.666667% !important;
+        width: 16.666667% !important;
     }
 
     .argseller-card {
