@@ -1,7 +1,7 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.9.4
- * Fix destroyTimer race condition, smart popup: animate only from hidden state
+ * Smarty template for rendering sellers grid v2.9.6
+ * Fix mailto leading space (%20) bug by strictly trimming email strings
  *}
 
 <style type="text/css">
@@ -355,10 +355,10 @@
                 {* data-* attributes carry all popup content — no nested hover-info div *}
                 {* data-email uses nofilter so JS gets the raw value without HTML entity encoding *}
                 <div class="argseller-card"
-                    data-name="{$seller.name|escape:'html':'UTF-8'}"
-                    data-phone="{$seller.formatted_phone|escape:'html':'UTF-8'}"
-                    data-whatsapp="{$seller.clean_whatsapp|escape:'html':'UTF-8'}"
-                    data-email="{$seller.full_email|escape:'javascript'}"
+                    data-name="{$seller.name|trim|escape:'html':'UTF-8'}"
+                    data-phone="{$seller.formatted_phone|trim|escape:'html':'UTF-8'}"
+                    data-whatsapp="{$seller.clean_whatsapp|trim|escape:'html':'UTF-8'}"
+                    data-email="{$seller.full_email|trim|escape:'html':'UTF-8'}"
                     data-qr="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https%3A%2F%2Fapi.whatsapp.com%2Fsend%3Fphone%3D{$seller.clean_whatsapp|escape:'url'}"
                 >
                     {* Profile Photo *}
@@ -404,10 +404,10 @@
     var destroyTimer = null;
 
     function buildPopupHTML(card) {
-        var qr    = card.getAttribute('data-qr');
-        var phone = card.getAttribute('data-phone');
-        var wa    = card.getAttribute('data-whatsapp');
-        var email = card.getAttribute('data-email');
+        var qr    = (card.getAttribute('data-qr') || '').trim();
+        var phone = (card.getAttribute('data-phone') || '').trim();
+        var wa    = (card.getAttribute('data-whatsapp') || '').trim();
+        var email = (card.getAttribute('data-email') || '').trim().replace(/^\s+/, '');
 
         return '<div class="argseller-qr" style="width:100px;height:100px;margin:0 auto 10px;border:1px solid #e2e8f0;padding:4px;border-radius:8px;background:#fff;">'
              + '<img src="' + qr + '" style="width:100%;height:100%;display:block;object-fit:contain;" loading="lazy" />'

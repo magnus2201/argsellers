@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '2.9.5';
+        $this->version = '2.9.6';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -337,10 +337,11 @@ class Argsellers extends Module
                 }
                 $seller['formatted_phone'] = $phone_prefix . ' ' . $formatted_num;
 
-                if (strpos($seller['email'], '@') === false) {
-                    $seller['full_email'] = $seller['email'] . $email_suffix;
+                $clean_email = trim($seller['email']);
+                if (strpos($clean_email, '@') === false) {
+                    $seller['full_email'] = trim($clean_email . $email_suffix);
                 } else {
-                    $seller['full_email'] = $seller['email'];
+                    $seller['full_email'] = $clean_email;
                 }
             }
 
