@@ -1,7 +1,7 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.7.8
- * Floating popup architecture: popup lives in <body>, positioned via getBoundingClientRect()
+ * Smarty template for rendering sellers grid v2.7.9
+ * Floating popup architecture + slide-down animation + mail button fix
  *}
 
 <style type="text/css">
@@ -108,7 +108,7 @@
    ========================================================= */
 #argsellers-floating-popup {
     display: none;
-    position: fixed;
+    position: absolute;
     background: #ffffff;
     border-radius: 0 0 12px 12px;
     padding: 14px 12px 18px 12px;
@@ -118,8 +118,8 @@
     text-align: center;
     min-width: 120px;
     opacity: 0;
-    transform: translateY(-4px);
-    transition: opacity 0.22s ease, transform 0.22s ease;
+    transform: translateY(-10px);
+    transition: opacity 0.26s ease, transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
 }
 
@@ -353,11 +353,12 @@
         {foreach from=$argsellers item=seller}
             <div class="argseller-col">
                 {* data-* attributes carry all popup content — no nested hover-info div *}
+                {* data-email uses nofilter so JS gets the raw value without HTML entity encoding *}
                 <div class="argseller-card"
                     data-name="{$seller.name|escape:'html':'UTF-8'}"
                     data-phone="{$seller.formatted_phone|escape:'html':'UTF-8'}"
                     data-whatsapp="{$seller.clean_whatsapp|escape:'html':'UTF-8'}"
-                    data-email="{$seller.full_email|escape:'html':'UTF-8'}"
+                    data-email="{$seller.full_email|escape:'javascript'}"
                     data-qr="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https%3A%2F%2Fapi.whatsapp.com%2Fsend%3Fphone%3D{$seller.clean_whatsapp|escape:'url'}"
                 >
                     {* Profile Photo *}
