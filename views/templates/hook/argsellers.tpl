@@ -1,6 +1,7 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.6.1 (with inline CSS protection)
+ * Smarty template for rendering sellers grid v2.7.8
+ * Floating popup architecture: popup lives in <body>, positioned via getBoundingClientRect()
  *}
 
 <style type="text/css">
@@ -80,55 +81,52 @@
         border-radius: 12px !important;
         padding: 14px 6px 10px 6px !important;
         text-align: center !important;
-        transition: all 0.2s ease-in-out !important;
-        z-index: 10 !important;
+        transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out !important;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
         box-sizing: border-box !important;
-        isolation: isolate !important;
+        cursor: default !important;
     }
 
-    .argseller-card:hover {
+    .argseller-card.argseller-active {
         box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15) !important;
         transform: translateY(-3px) !important;
         border-bottom-left-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
-        z-index: 99999 !important;
-    }
-
-    /* Dropdown: fondo blanco solido, sin transparencia */
-    .argseller-hover-info {
-        opacity: 0 !important;
-        visibility: hidden !important;
-        position: absolute !important;
-        top: 100% !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        background-color: #ffffff !important;
-        background: #ffffff !important;
-        border-radius: 0 0 12px 12px !important;
-        padding: 12px 10px 16px 10px !important;
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.18) !important;
-        transform: translateY(-2px) !important;
-        transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s !important;
-        z-index: 999999 !important;
-        box-sizing: border-box !important;
-        isolation: isolate !important;
-    }
-
-    .argseller-card:hover .argseller-hover-info {
-        opacity: 1 !important;
-        visibility: visible !important;
-        transform: translateY(0) !important;
     }
 
     .argseller-mobile-buttons {
         display: none !important;
     }
-    
+
     .argseller-desktop-only {
         display: block !important;
     }
+}
+
+/* =========================================================
+   FLOATING POPUP — vive en <body>, fuera de todo stacking context
+   ========================================================= */
+#argsellers-floating-popup {
+    display: none;
+    position: fixed;
+    background: #ffffff;
+    border-radius: 0 0 12px 12px;
+    padding: 14px 12px 18px 12px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.20);
+    z-index: 2147483647;
+    box-sizing: border-box;
+    text-align: center;
+    min-width: 120px;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    pointer-events: none;
+}
+
+#argsellers-floating-popup.argsellers-popup-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 /* Tablet Viewport */
@@ -343,6 +341,9 @@
 }
 </style>
 
+{* Floating popup container — appended to <body> by JS, lives outside all stacking contexts *}
+<div id="argsellers-floating-popup"></div>
+
 <div class="argsellers-container">
     <div class="argsellers-header-title">
         <span class="argseller-title-light">ASESORES</span> <span class="argseller-title-bold">COMERCIALES</span>
@@ -351,8 +352,14 @@
     <div class="argsellers-grid">
         {foreach from=$argsellers item=seller}
             <div class="argseller-col">
-                <div class="argseller-card">
-                    
+                {* data-* attributes carry all popup content — no nested hover-info div *}
+                <div class="argseller-card"
+                    data-name="{$seller.name|escape:'html':'UTF-8'}"
+                    data-phone="{$seller.formatted_phone|escape:'html':'UTF-8'}"
+                    data-whatsapp="{$seller.clean_whatsapp|escape:'html':'UTF-8'}"
+                    data-email="{$seller.full_email|escape:'html':'UTF-8'}"
+                    data-qr="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https%3A%2F%2Fapi.whatsapp.com%2Fsend%3Fphone%3D{$seller.clean_whatsapp|escape:'url'}"
+                >
                     {* Profile Photo *}
                     <div class="argseller-photo-wrapper">
                         {if $seller.image && $seller.image != ''}
@@ -367,8 +374,8 @@
                     {* Name and Sector *}
                     <div class="argseller-name">{$seller.name|escape:'html':'UTF-8'}</div>
                     <div class="argseller-role">{$seller.role|escape:'html':'UTF-8'}</div>
-                    
-                    {* Mobile & Tablet Buttons *}
+
+                    {* Mobile & Tablet Buttons (always visible on mobile) *}
                     <div class="argseller-mobile-buttons">
                         <a href="https://api.whatsapp.com/send?phone={$seller.clean_whatsapp|escape:'html':'UTF-8'}" class="btn-argseller-whatsapp" target="_blank" rel="noopener noreferrer">
                             <i class="fa fa-whatsapp"></i> {l s='Chatear' mod='argsellers'}
@@ -377,32 +384,118 @@
                             <i class="fa fa-envelope"></i> {l s='Mail' mod='argsellers'}
                         </a>
                     </div>
-
-                    {* Desktop Hover Information *}
-                    <div class="argseller-hover-info">
-                        <div class="argseller-qr argseller-desktop-only">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https%3A%2F%2Fapi.whatsapp.com%2Fsend%3Fphone%3D{$seller.clean_whatsapp|escape:'url'}" alt="QR WhatsApp {$seller.name|escape:'html':'UTF-8'}" loading="lazy" />
-                        </div>
-                        
-                        <div class="argseller-phone-text argseller-desktop-only">
-                            {$seller.formatted_phone|escape:'html':'UTF-8'}
-                        </div>
-
-                        <a href="https://api.whatsapp.com/send?phone={$seller.clean_whatsapp|escape:'html':'UTF-8'}" class="btn-argseller-whatsapp argseller-desktop-only" target="_blank" rel="noopener noreferrer">
-                            <i class="fa fa-whatsapp"></i> {l s='Chatear' mod='argsellers'}
-                        </a>
-                        
-                        <a href="mailto:{$seller.full_email|escape:'html':'UTF-8'}" class="btn-argseller-mail argseller-desktop-only">
-                            <i class="fa fa-envelope"></i> {l s='Mail' mod='argsellers'}
-                        </a>
-                        
-                        <div class="argseller-email-text argseller-desktop-only">
-                            {$seller.full_email|escape:'html':'UTF-8'}
-                        </div>
-                    </div>
-
                 </div>
             </div>
         {/foreach}
     </div>
 </div>
+
+<script type="text/javascript">
+(function() {
+    var popup = document.getElementById('argsellers-floating-popup');
+    if (!popup) return;
+
+    // Move popup to <body> to escape all stacking contexts
+    document.body.appendChild(popup);
+
+    var activeCard = null;
+    var hideTimer = null;
+
+    function buildPopupHTML(card) {
+        var qr      = card.getAttribute('data-qr');
+        var phone   = card.getAttribute('data-phone');
+        var wa      = card.getAttribute('data-whatsapp');
+        var email   = card.getAttribute('data-email');
+        return '<div class="argseller-qr" style="width:100px;height:100px;margin:0 auto 10px;border:1px solid #e2e8f0;padding:4px;border-radius:8px;background:#fff;">'
+             + '<img src="' + qr + '" style="width:100%;height:100%;display:block;object-fit:contain;" loading="lazy" />'
+             + '</div>'
+             + '<div class="argseller-phone-text" style="font-size:0.85rem;color:#475569;margin-bottom:8px;font-weight:600;">'
+             + phone
+             + '</div>'
+             + '<a href="https://api.whatsapp.com/send?phone=' + wa + '" class="btn-argseller-whatsapp" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;width:100%;margin-bottom:6px;">'
+             + '<i class="fa fa-whatsapp" style="margin-right:5px;"></i> Chatear'
+             + '</a>'
+             + '<a href="mailto:' + email + '" class="btn-argseller-mail" style="display:flex;align-items:center;justify-content:center;width:100%;">'
+             + '<i class="fa fa-envelope" style="margin-right:5px;"></i> Mail'
+             + '</a>'
+             + '<div class="argseller-email-text" style="font-size:0.78rem;color:#64748b;margin-top:6px;word-break:break-all;font-weight:500;">'
+             + email
+             + '</div>';
+    }
+
+    function positionPopup(card) {
+        var rect = card.getBoundingClientRect();
+        var scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        popup.style.left  = rect.left + 'px';
+        popup.style.top   = (rect.bottom + scrollY) + 'px';
+        popup.style.width = rect.width + 'px';
+        popup.style.position = 'absolute';
+    }
+
+    function showPopup(card) {
+        clearTimeout(hideTimer);
+        if (activeCard) activeCard.classList.remove('argseller-active');
+        activeCard = card;
+        card.classList.add('argseller-active');
+        popup.innerHTML = buildPopupHTML(card);
+        positionPopup(card);
+        popup.style.display = 'block';
+        // Force reflow before adding visible class for transition
+        popup.offsetHeight;
+        popup.classList.add('argsellers-popup-visible');
+    }
+
+    function hidePopup() {
+        hideTimer = setTimeout(function() {
+            popup.classList.remove('argsellers-popup-visible');
+            setTimeout(function() {
+                popup.style.display = 'none';
+                popup.innerHTML = '';
+            }, 230);
+            if (activeCard) {
+                activeCard.classList.remove('argseller-active');
+                activeCard = null;
+            }
+        }, 120);
+    }
+
+    // Only activate on desktop
+    function isDesktop() {
+        return window.innerWidth >= 992;
+    }
+
+    var cards = document.querySelectorAll('.argseller-card');
+    for (var i = 0; i < cards.length; i++) {
+        (function(card) {
+            card.addEventListener('mouseenter', function() {
+                if (!isDesktop()) return;
+                showPopup(card);
+            });
+            card.addEventListener('mouseleave', function() {
+                if (!isDesktop()) return;
+                hidePopup();
+            });
+        })(cards[i]);
+    }
+
+    // Keep popup visible when mouse moves into it
+    popup.addEventListener('mouseenter', function() {
+        clearTimeout(hideTimer);
+    });
+    popup.addEventListener('mouseleave', function() {
+        hidePopup();
+    });
+
+    // Reposition on scroll/resize
+    window.addEventListener('scroll', function() {
+        if (activeCard && popup.style.display !== 'none') {
+            positionPopup(activeCard);
+        }
+    }, { passive: true });
+    window.addEventListener('resize', function() {
+        if (activeCard && popup.style.display !== 'none') {
+            positionPopup(activeCard);
+        }
+    });
+})();
+</script>
