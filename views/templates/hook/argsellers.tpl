@@ -1,7 +1,7 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.7.9
- * Floating popup architecture + slide-down animation + mail button fix
+ * Smarty template for rendering sellers grid v2.9.1
+ * Fix mail button (JS click handler + diagnostic), fix animation between cards
  *}
 
 <style type="text/css">
@@ -407,6 +407,10 @@
         var phone   = card.getAttribute('data-phone');
         var wa      = card.getAttribute('data-whatsapp');
         var email   = card.getAttribute('data-email');
+
+        // DIAGNOSTIC: log email value so dev can verify in F12 console
+        console.log('[ArgsellersDebug] Email leido del atributo data-email:', JSON.stringify(email));
+
         return '<div class="argseller-qr" style="width:100px;height:100px;margin:0 auto 10px;border:1px solid #e2e8f0;padding:4px;border-radius:8px;background:#fff;">'
              + '<img src="' + qr + '" style="width:100%;height:100%;display:block;object-fit:contain;" loading="lazy" />'
              + '</div>'
@@ -416,7 +420,7 @@
              + '<a href="https://api.whatsapp.com/send?phone=' + wa + '" class="btn-argseller-whatsapp" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;width:100%;margin-bottom:6px;">'
              + '<i class="fa fa-whatsapp" style="margin-right:5px;"></i> Chatear'
              + '</a>'
-             + '<a href="mailto:' + email + '" class="btn-argseller-mail" style="display:flex;align-items:center;justify-content:center;width:100%;">'
+             + '<a href="#" data-mailto="' + email + '" class="btn-argseller-mail argseller-mail-btn" style="display:flex;align-items:center;justify-content:center;width:100%;">'
              + '<i class="fa fa-envelope" style="margin-right:5px;"></i> Mail'
              + '</a>'
              + '<div class="argseller-email-text" style="font-size:0.78rem;color:#64748b;margin-top:6px;word-break:break-all;font-weight:500;">'
@@ -441,8 +445,24 @@
         popup.innerHTML = buildPopupHTML(card);
         positionPopup(card);
         popup.style.display = 'block';
-        // Force reflow before adding visible class for transition
+
+        // Attach mail click handler to bypass any theme preventDefault
+        var mailBtn = popup.querySelector('.argseller-mail-btn');
+        if (mailBtn) {
+            mailBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var mailto = this.getAttribute('data-mailto');
+                console.log('[ArgsellersDebug] Abriendo mailto:', mailto);
+                window.location.href = 'mailto:' + mailto;
+            });
+        }
+
+        // Remove visible class first so CSS transition re-fires when switching cards
+        popup.classList.remove('argsellers-popup-visible');
+        // Force reflow to reset transition state
         popup.offsetHeight;
+        // Now add visible class to trigger slide-down + fade animation
         popup.classList.add('argsellers-popup-visible');
     }
 
