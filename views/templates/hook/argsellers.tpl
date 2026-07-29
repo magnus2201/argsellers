@@ -1,7 +1,7 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.9.2
- * Mail via hidden anchor click, animation between cards via double rAF
+ * Smarty template for rendering sellers grid v2.9.3
+ * Mail button: real native anchor href=mailto, no JS interception
  *}
 
 <style type="text/css">
@@ -420,7 +420,7 @@
              + '<a href="https://api.whatsapp.com/send?phone=' + wa + '" class="btn-argseller-whatsapp" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;width:100%;margin-bottom:6px;">'
              + '<i class="fa fa-whatsapp" style="margin-right:5px;"></i> Chatear'
              + '</a>'
-             + '<a href="#" data-mailto="' + email + '" class="btn-argseller-mail argseller-mail-btn" style="display:flex;align-items:center;justify-content:center;width:100%;">'
+             + '<a href="mailto:' + email + '" class="btn-argseller-mail" style="display:flex;align-items:center;justify-content:center;width:100%;">'
              + '<i class="fa fa-envelope" style="margin-right:5px;"></i> Mail'
              + '</a>'
              + '<div class="argseller-email-text" style="font-size:0.78rem;color:#64748b;margin-top:6px;word-break:break-all;font-weight:500;">'
@@ -445,23 +445,6 @@
         popup.innerHTML = buildPopupHTML(card);
         positionPopup(card);
         popup.style.display = 'block';
-
-        // Attach mail click handler: hidden anchor click bypasses theme JS blockers
-        var mailBtn = popup.querySelector('.argseller-mail-btn');
-        if (mailBtn) {
-            mailBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                var mailto = this.getAttribute('data-mailto');
-                console.log('[ArgsellersDebug] Abriendo mailto via anchor click:', mailto);
-                var tempA = document.createElement('a');
-                tempA.href = 'mailto:' + mailto;
-                tempA.style.display = 'none';
-                document.body.appendChild(tempA);
-                tempA.click();
-                setTimeout(function() { document.body.removeChild(tempA); }, 200);
-            });
-        }
 
         // Remove visible class to reset animation state
         popup.classList.remove('argsellers-popup-visible');
