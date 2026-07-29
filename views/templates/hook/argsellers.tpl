@@ -509,6 +509,26 @@
         hidePopup();
     });
 
+    // Mail click diagnostic: logs without blocking native mailto behavior
+    popup.addEventListener('click', function(e) {
+        var mailLink = e.target.closest ? e.target.closest('.btn-argseller-mail') : null;
+        if (!mailLink) {
+            // Fallback for IE: check target and parentNode manually
+            var t = e.target;
+            while (t && t !== popup) {
+                if (t.classList && t.classList.contains('btn-argseller-mail')) { mailLink = t; break; }
+                t = t.parentNode;
+            }
+        }
+        if (mailLink) {
+            var href = mailLink.getAttribute('href') || mailLink.href || '(sin href)';
+            console.log('[ArgsellersMail] Click detectado en boton Mail');
+            console.log('[ArgsellersMail] href del link:', href);
+            console.log('[ArgsellersMail] Si el cliente de mail no abre, el problema es del navegador/OS, no del modulo.');
+            // No preventDefault() — el mailto sigue su curso nativo
+        }
+    });
+
     // Reposition on scroll/resize
     window.addEventListener('scroll', function() {
         if (activeCard && popup.style.display !== 'none') {
