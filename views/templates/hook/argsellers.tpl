@@ -1,7 +1,6 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.9.8
- * Added Contact Page 4-Column Tabs CSS + JS directly inside module template
+ * Smarty template for rendering sellers grid v2.9.9
  *}
 
 <style type="text/css">
@@ -541,99 +540,5 @@
             positionPopup(activeCard);
         }
     });
-})();
-</script>
-
-{* Contact Page 4-Column Tabs Handler — Auto-injected on Contact Page *}
-<style type="text/css">
-@media (min-width: 992px) {
-  .infoVendedores.desplegable,
-  .infoServicioTecnico.desplegable,
-  .infoAgendarReunion.desplegable,
-  .infoSucursales.desplegable {
-    display: none !important;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-  }
-
-  .desplegable.active-section {
-    display: block !important;
-    opacity: 1 !important;
-  }
-
-  .vendedoresText,
-  .servicioTecnicoText,
-  .agendarReunionText,
-  .sucursalesText {
-    cursor: pointer !important;
-    padding: 10px 14px !important;
-    border-radius: 8px 8px 0 0 !important;
-    transition: all 0.2s ease !important;
-    user-select: none !important;
-    border-bottom: 3px solid transparent !important;
-  }
-
-  .vendedoresText:hover,
-  .servicioTecnicoText:hover,
-  .agendarReunionText:hover,
-  .sucursalesText:hover {
-    color: #009de0 !important;
-    background: rgba(0, 157, 224, 0.06) !important;
-  }
-
-  .vendedoresText.active-tab,
-  .servicioTecnicoText.active-tab,
-  .agendarReunionText.active-tab,
-  .sucursalesText.active-tab {
-    color: #009de0 !important;
-    border-bottom: 3px solid #009de0 !important;
-    font-weight: 700 !important;
-  }
-}
-</style>
-
-<script type="text/javascript">
-(function initContactTabs() {
-  function run() {
-    if (window.innerWidth < 992) return;
-
-    var tabs = [
-      { btn: '.vendedoresText', target: '.infoVendedores' },
-      { btn: '.servicioTecnicoText', target: '.infoServicioTecnico' },
-      { btn: '.agendarReunionText', target: '.infoAgendarReunion' },
-      { btn: '.sucursalesText', target: '.infoSucursales' }
-    ];
-
-    function activateTab(index) {
-      tabs.forEach(function(item, i) {
-        var btns = document.querySelectorAll(item.btn);
-        var targets = document.querySelectorAll(item.target);
-
-        if (i === index) {
-          btns.forEach(function(b) { b.classList.add('active-tab'); });
-          targets.forEach(function(t) { t.classList.add('active-section'); });
-        } else {
-          btns.forEach(function(b) { b.classList.remove('active-tab'); });
-          targets.forEach(function(t) { t.classList.remove('active-section'); });
-        }
-      });
-    }
-
-    activateTab(0);
-
-    tabs.forEach(function(item, idx) {
-      document.querySelectorAll(item.btn).forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          activateTab(idx);
-        });
-      });
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', run);
-  } else {
-    run();
-  }
 })();
 </script>
