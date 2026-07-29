@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '2.9.6';
+        $this->version = '2.9.7';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -343,6 +343,7 @@ class Argsellers extends Module
                 } else {
                     $seller['full_email'] = $clean_email;
                 }
+                $seller['gmail_url'] = 'https://mail.google.com/mail/?view=cm&fs=1&to=' . urlencode($seller['full_email']);
             }
 
             $this->context->smarty->assign(array(

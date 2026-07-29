@@ -1,7 +1,7 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.9.6
- * Fix mailto leading space (%20) bug by strictly trimming email strings
+ * Smarty template for rendering sellers grid v2.9.7
+ * Mail button opens Gmail Web Compose directly in a new tab
  *}
 
 <style type="text/css">
@@ -381,7 +381,7 @@
                         <a href="https://api.whatsapp.com/send?phone={$seller.clean_whatsapp|escape:'html':'UTF-8'}" class="btn-argseller-whatsapp" target="_blank" rel="noopener noreferrer">
                             <i class="fa fa-whatsapp"></i> {l s='Chatear' mod='argsellers'}
                         </a>
-                        <a href="mailto:{$seller.full_email|escape:'html':'UTF-8'}" class="btn-argseller-mail">
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to={$seller.full_email|escape:'url'}" class="btn-argseller-mail" target="_blank" rel="noopener noreferrer">
                             <i class="fa fa-envelope"></i> {l s='Mail' mod='argsellers'}
                         </a>
                     </div>
@@ -408,6 +408,7 @@
         var phone = (card.getAttribute('data-phone') || '').trim();
         var wa    = (card.getAttribute('data-whatsapp') || '').trim();
         var email = (card.getAttribute('data-email') || '').trim().replace(/^\s+/, '');
+        var gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(email);
 
         return '<div class="argseller-qr" style="width:100px;height:100px;margin:0 auto 10px;border:1px solid #e2e8f0;padding:4px;border-radius:8px;background:#fff;">'
              + '<img src="' + qr + '" style="width:100%;height:100%;display:block;object-fit:contain;" loading="lazy" />'
@@ -418,7 +419,7 @@
              + '<a href="https://api.whatsapp.com/send?phone=' + wa + '" class="btn-argseller-whatsapp" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;width:100%;margin-bottom:6px;">'
              + '<i class="fa fa-whatsapp" style="margin-right:5px;"></i> Chatear'
              + '</a>'
-             + '<a href="mailto:' + email + '" class="btn-argseller-mail" style="display:flex;align-items:center;justify-content:center;width:100%;">'
+             + '<a href="' + gmailUrl + '" class="btn-argseller-mail" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;width:100%;">'
              + '<i class="fa fa-envelope" style="margin-right:5px;"></i> Mail'
              + '</a>'
              + '<div class="argseller-email-text" style="font-size:0.78rem;color:#64748b;margin-top:6px;word-break:break-all;font-weight:500;">'
