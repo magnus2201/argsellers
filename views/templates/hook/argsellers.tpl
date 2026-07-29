@@ -1,7 +1,7 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.9.3
- * Mail button: real native anchor href=mailto, no JS interception
+ * Smarty template for rendering sellers grid v2.9.4
+ * Fix destroyTimer race condition, smart popup: animate only from hidden state
  *}
 
 <style type="text/css">
@@ -399,17 +399,15 @@
     // Move popup to <body> to escape all stacking contexts
     document.body.appendChild(popup);
 
-    var activeCard = null;
-    var hideTimer = null;
+    var activeCard   = null;
+    var hideTimer    = null;
+    var destroyTimer = null;
 
     function buildPopupHTML(card) {
-        var qr      = card.getAttribute('data-qr');
-        var phone   = card.getAttribute('data-phone');
-        var wa      = card.getAttribute('data-whatsapp');
-        var email   = card.getAttribute('data-email');
-
-        // DIAGNOSTIC: log email value so dev can verify in F12 console
-        console.log('[ArgsellersDebug] Email leido del atributo data-email:', JSON.stringify(email));
+        var qr    = card.getAttribute('data-qr');
+        var phone = card.getAttribute('data-phone');
+        var wa    = card.getAttribute('data-whatsapp');
+        var email = card.getAttribute('data-email');
 
         return '<div class="argseller-qr" style="width:100px;height:100px;margin:0 auto 10px;border:1px solid #e2e8f0;padding:4px;border-radius:8px;background:#fff;">'
              + '<img src="' + qr + '" style="width:100%;height:100%;display:block;object-fit:contain;" loading="lazy" />'
@@ -429,45 +427,57 @@
     }
 
     function positionPopup(card) {
-        var rect = card.getBoundingClientRect();
+        var rect   = card.getBoundingClientRect();
         var scrollY = window.pageYOffset || document.documentElement.scrollTop;
-        popup.style.left  = rect.left + 'px';
-        popup.style.top   = (rect.bottom + scrollY) + 'px';
-        popup.style.width = rect.width + 'px';
         popup.style.position = 'absolute';
+        popup.style.left     = rect.left + 'px';
+        popup.style.top      = (rect.bottom + scrollY) + 'px';
+        popup.style.width    = rect.width + 'px';
     }
 
     function showPopup(card) {
+        // Cancel both timers so a pending destroy never fires
         clearTimeout(hideTimer);
+        clearTimeout(destroyTimer);
+
+        var wasVisible = (popup.style.display === 'block');
+
         if (activeCard) activeCard.classList.remove('argseller-active');
         activeCard = card;
         card.classList.add('argseller-active');
+
+        // Always update content and position
         popup.innerHTML = buildPopupHTML(card);
         positionPopup(card);
-        popup.style.display = 'block';
 
-        // Remove visible class to reset animation state
-        popup.classList.remove('argsellers-popup-visible');
-        // Double requestAnimationFrame: guarantees browser repaints between frames
-        // so transition re-fires correctly when switching directly between cards
-        requestAnimationFrame(function() {
+        if (!wasVisible) {
+            // Popup was hidden: show with slide-down + fade animation
+            popup.style.display = 'block';
+            popup.classList.remove('argsellers-popup-visible');
             requestAnimationFrame(function() {
-                popup.classList.add('argsellers-popup-visible');
+                requestAnimationFrame(function() {
+                    popup.classList.add('argsellers-popup-visible');
+                });
             });
-        });
+        } else {
+            // Popup already visible: content + position updated above.
+            // Ensure visible class is set (might have been mid-hide)
+            popup.classList.add('argsellers-popup-visible');
+        }
     }
 
     function hidePopup() {
         hideTimer = setTimeout(function() {
             popup.classList.remove('argsellers-popup-visible');
-            setTimeout(function() {
-                popup.style.display = 'none';
-                popup.innerHTML = '';
-            }, 230);
             if (activeCard) {
                 activeCard.classList.remove('argseller-active');
                 activeCard = null;
             }
+            // Track destroyTimer so showPopup can cancel it if needed
+            destroyTimer = setTimeout(function() {
+                popup.style.display = 'none';
+                popup.innerHTML = '';
+            }, 280);
         }, 120);
     }
 
@@ -493,6 +503,7 @@
     // Keep popup visible when mouse moves into it
     popup.addEventListener('mouseenter', function() {
         clearTimeout(hideTimer);
+        clearTimeout(destroyTimer);
     });
     popup.addEventListener('mouseleave', function() {
         hidePopup();
