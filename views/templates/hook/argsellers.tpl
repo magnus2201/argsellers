@@ -1,7 +1,7 @@
 {*
  * 2026 ARGSEGURIDAD
- * Smarty template for rendering sellers grid v2.9.1
- * Fix mail button (JS click handler + diagnostic), fix animation between cards
+ * Smarty template for rendering sellers grid v2.9.2
+ * Mail via hidden anchor click, animation between cards via double rAF
  *}
 
 <style type="text/css">
@@ -446,24 +446,32 @@
         positionPopup(card);
         popup.style.display = 'block';
 
-        // Attach mail click handler to bypass any theme preventDefault
+        // Attach mail click handler: hidden anchor click bypasses theme JS blockers
         var mailBtn = popup.querySelector('.argseller-mail-btn');
         if (mailBtn) {
             mailBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var mailto = this.getAttribute('data-mailto');
-                console.log('[ArgsellersDebug] Abriendo mailto:', mailto);
-                window.location.href = 'mailto:' + mailto;
+                console.log('[ArgsellersDebug] Abriendo mailto via anchor click:', mailto);
+                var tempA = document.createElement('a');
+                tempA.href = 'mailto:' + mailto;
+                tempA.style.display = 'none';
+                document.body.appendChild(tempA);
+                tempA.click();
+                setTimeout(function() { document.body.removeChild(tempA); }, 200);
             });
         }
 
-        // Remove visible class first so CSS transition re-fires when switching cards
+        // Remove visible class to reset animation state
         popup.classList.remove('argsellers-popup-visible');
-        // Force reflow to reset transition state
-        popup.offsetHeight;
-        // Now add visible class to trigger slide-down + fade animation
-        popup.classList.add('argsellers-popup-visible');
+        // Double requestAnimationFrame: guarantees browser repaints between frames
+        // so transition re-fires correctly when switching directly between cards
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                popup.classList.add('argsellers-popup-visible');
+            });
+        });
     }
 
     function hidePopup() {
