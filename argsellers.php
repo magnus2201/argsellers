@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '3.3.0';
+        $this->version = '3.3.1';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -190,13 +190,16 @@ class Argsellers extends Module
         if (Tools::isSubmit('delete_shortcode')) {
             $sc_to_delete = trim(str_replace('%', '', Tools::getValue('delete_shortcode')));
             $shortcodes = json_decode(Configuration::get('ARGSELLERS_SHORTCODES'), true);
-            if (is_array($shortcodes)) {
+            if (!is_array($shortcodes)) {
+                $shortcodes = array('vendedores');
+            }
+
+            if (count($shortcodes) <= 1) {
+                $output .= $this->displayError($this->l('Debe haber al menos un shortcode.'));
+            } else {
                 $shortcodes = array_values(array_filter($shortcodes, function($sc) use ($sc_to_delete) {
                     return $sc !== $sc_to_delete;
                 }));
-                if (empty($shortcodes)) {
-                    $shortcodes = array('vendedores');
-                }
                 Configuration::updateValue('ARGSELLERS_SHORTCODES', json_encode($shortcodes));
                 $output .= $this->displayConfirmation($this->l('Shortcode eliminado correctamente.'));
             }
@@ -212,25 +215,40 @@ class Argsellers extends Module
             $sectors = array();
         }
 
-        $sectors_html = '<div style="margin-bottom: 20px;"><h4>Sectores / Roles Disponibles:</h4><ul style="list-style: none; padding-left: 0;">';
+        $sectors_html = '<div style="margin-top: 2px;">';
+        $sectors_html .= '<div class="input-group" style="max-width: 450px; margin-bottom: 12px;">';
+        $sectors_html .= '<input type="text" name="new_sector_name" class="form-control" placeholder="Ej: Soporte Post-Venta" />';
+        $sectors_html .= '<span class="input-group-btn">';
+        $sectors_html .= '<button type="submit" name="submitArgsellersConfig" class="btn btn-default"><i class="icon-plus"></i> ' . $this->l('Añadir Sector') . '</button>';
+        $sectors_html .= '</span></div>';
+        $sectors_html .= '<div style="margin-top: 6px;">';
         foreach ($sectors as $sector) {
             $delete_url = $this->context->link->getAdminLink('AdminModules', true) . '&configure=' . $this->name . '&delete_sector=' . urlencode($sector);
-            $sectors_html .= '<li style="margin-bottom: 5px; background: #f8f9fa; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-right: 8px;">' . htmlspecialchars($sector) . ' <a href="' . $delete_url . '" style="color: #dc3545; margin-left: 8px; font-weight: bold;" onclick="return confirm(\'¿Eliminar este sector?\');">&times;</a></li>';
+            $sectors_html .= '<span style="margin-bottom: 6px; background: #f1f5f9; color: #334155; padding: 6px 12px; border-radius: 6px; display: inline-block; margin-right: 8px; font-weight: 600; border: 1px solid #cbd5e1;">' . htmlspecialchars($sector) . ' <a href="' . $delete_url . '" style="color: #ef4444; margin-left: 8px; font-weight: bold; text-decoration: none;" onclick="return confirm(\'¿Eliminar este sector?\');">&times;</a></span>';
         }
-        $sectors_html .= '</ul></div>';
+        $sectors_html .= '</div></div>';
 
         $shortcodes = json_decode(Configuration::get('ARGSELLERS_SHORTCODES'), true);
         if (!is_array($shortcodes) || empty($shortcodes)) {
             $shortcodes = array('vendedores');
         }
 
-        $shortcodes_html = '<div style="margin-bottom: 20px;"><h4>Shortcodes Personalizados Activos:</h4><ul style="list-style: none; padding-left: 0;">';
+        $shortcodes_html = '<div style="margin-top: 2px;">';
+        $shortcodes_html .= '<div class="input-group" style="max-width: 450px; margin-bottom: 6px;">';
+        $shortcodes_html .= '<span class="input-group-addon" style="background: #e0f2fe; color: #0284c7; font-weight: 800;">%</span>';
+        $shortcodes_html .= '<input type="text" name="new_shortcode_name" class="form-control" placeholder="Ej: vendedores, asesores, equipo" />';
+        $shortcodes_html .= '<span class="input-group-addon" style="background: #e0f2fe; color: #0284c7; font-weight: 800;">%</span>';
+        $shortcodes_html .= '<span class="input-group-btn">';
+        $shortcodes_html .= '<button type="submit" name="submitArgsellersConfig" class="btn btn-default"><i class="icon-plus"></i> ' . $this->l('Añadir Shortcode') . '</button>';
+        $shortcodes_html .= '</span></div>';
+        $shortcodes_html .= '<p class="help-block" style="margin-bottom: 10px;">Escribe solo el nombre interno. Se guardará automáticamente como %nombre%.</p>';
+        $shortcodes_html .= '<div style="margin-top: 6px;">';
         foreach ($shortcodes as $sc) {
             $sc_clean = trim(str_replace('%', '', $sc));
             $delete_url = $this->context->link->getAdminLink('AdminModules', true) . '&configure=' . $this->name . '&delete_shortcode=' . urlencode($sc_clean);
-            $shortcodes_html .= '<li style="margin-bottom: 5px; background: #e0f2fe; color: #0284c7; padding: 6px 14px; border-radius: 6px; display: inline-block; margin-right: 8px; font-weight: bold; border: 1px solid #bae6fd;">%' . htmlspecialchars($sc_clean) . '% <a href="' . $delete_url . '" style="color: #dc3545; margin-left: 10px; font-weight: bold;" onclick="return confirm(\'¿Eliminar este shortcode?\');">&times;</a></li>';
+            $shortcodes_html .= '<span style="margin-bottom: 6px; background: #e0f2fe; color: #0284c7; padding: 6px 14px; border-radius: 6px; display: inline-block; margin-right: 8px; font-weight: bold; border: 1px solid #bae6fd;">%' . htmlspecialchars($sc_clean) . '% <a href="' . $delete_url . '" style="color: #ef4444; margin-left: 10px; font-weight: bold; text-decoration: none;" onclick="return confirm(\'¿Eliminar este shortcode?\');">&times;</a></span>';
         }
-        $shortcodes_html .= '</ul></div>';
+        $shortcodes_html .= '</div></div>';
 
         $fields_form = array(
             'form' => array(
@@ -255,25 +273,13 @@ class Argsellers extends Module
                     ),
                     array(
                         'type' => 'free',
-                        'label' => $this->l('Sectores Actuales'),
+                        'label' => $this->l('Sectores / Roles'),
                         'name' => 'sectors_list_html',
                     ),
                     array(
-                        'type' => 'text',
-                        'label' => $this->l('Añadir Nuevo Sector / Rol'),
-                        'name' => 'new_sector_name',
-                        'desc' => $this->l('Escribe un nuevo sector (ej. Soporte Post-Venta) y haz clic en Guardar para añadirlo a las opciones.'),
-                    ),
-                    array(
                         'type' => 'free',
-                        'label' => $this->l('Shortcodes Personalizados Activos'),
+                        'label' => $this->l('Shortcodes Personalizados'),
                         'name' => 'shortcodes_list_html',
-                    ),
-                    array(
-                        'type' => 'text',
-                        'label' => $this->l('Añadir Nuevo Shortcode (se envolverá automáticamente en % %)'),
-                        'name' => 'new_shortcode_name',
-                        'desc' => $this->l('Escribe solo el nombre interno (ej: "vendedores", "asesores", "equipo"). Se guardará automáticamente como %nombre%.'),
                     ),
                 ),
                 'submit' => array(
@@ -297,9 +303,7 @@ class Argsellers extends Module
         $helper->fields_value['ARGSELLERS_PHONE_PREFIX'] = Configuration::get('ARGSELLERS_PHONE_PREFIX');
         $helper->fields_value['ARGSELLERS_EMAIL_SUFFIX'] = Configuration::get('ARGSELLERS_EMAIL_SUFFIX');
         $helper->fields_value['sectors_list_html'] = $sectors_html;
-        $helper->fields_value['new_sector_name'] = '';
         $helper->fields_value['shortcodes_list_html'] = $shortcodes_html;
-        $helper->fields_value['new_shortcode_name'] = '';
 
         return $helper->generateForm(array($fields_form));
     }
@@ -485,11 +489,11 @@ class Argsellers extends Module
     public function runUpgradeModule()
     {
         if (class_exists('Module')) {
-            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.3.0.php';
+            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.3.1.php';
             if (file_exists($up_file)) {
                 include_once($up_file);
-                if (function_exists('upgrade_module_3_3_0')) {
-                    return upgrade_module_3_3_0($this);
+                if (function_exists('upgrade_module_3_3_1')) {
+                    return upgrade_module_3_3_1($this);
                 }
             }
         }
