@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '3.2.0';
+        $this->version = '3.2.1';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -30,7 +30,7 @@ class Argsellers extends Module
         parent::__construct();
 
         $this->displayName = $this->l('Gestor de Vendedores');
-        $this->description = $this->l('Administración dinámica y visual de los asesores comerciales mediante shortcodes.');
+        $this->description = $this->l('Administración dinámica y visual de los asesores comerciales mediante %vendedores%.');
 
         $this->ps_versions_compliancy = array('min' => '1.7.0.0', 'max' => defined('_PS_VERSION_') ? _PS_VERSION_ : '1.7.99.99');
     }
@@ -243,7 +243,18 @@ class Argsellers extends Module
         $helper->fields_value['sectors_list_html'] = $sectors_html;
         $helper->fields_value['new_sector_name'] = '';
 
-        return $helper->generateForm(array($fields_form));
+        $banner_html = '
+        <div class="panel" style="margin-top: 25px; border-left: 5px solid #0284c7; background: #f0f9ff; padding: 22px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
+            <h3 style="margin-top: 0; margin-bottom: 10px; color: #0284c7; font-size: 20px; font-weight: 700; display: flex; align-items: center;">
+                <i class="icon-info-circle" style="font-size: 24px; margin-right: 10px;"></i>
+                Instrucciones de Uso
+            </h3>
+            <p style="font-size: 19px; font-weight: 600; color: #1e293b; margin: 0; line-height: 1.5;">
+                Para insertar el bloque de vendedores en la página escribí <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">%vendedores%</code> o <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">[argsellers]</code> en el Page builder
+            </p>
+        </div>';
+
+        return $helper->generateForm(array($fields_form)) . $banner_html;
     }
 
     public function hookDisplayHeader()
@@ -265,7 +276,8 @@ class Argsellers extends Module
 
     public function smartyOutputFilter($output, $smarty)
     {
-        if (strpos($output, '[argsellers]') === false) {
+        $has_vendedores = (strpos($output, '%vendedores%') !== false || strpos($output, '[argsellers]') !== false);
+        if (!$has_vendedores) {
             return $output;
         }
 
@@ -274,19 +286,20 @@ class Argsellers extends Module
             return $output;
         }
 
-        return str_replace(
-            '[argsellers]',
-            $grid_html,
-            $output
-        );
+        $output = str_replace('%vendedores%', $grid_html, $output);
+        $output = str_replace('[argsellers]', $grid_html, $output);
+
+        return $output;
     }
 
     public function hookFilterHtmlContent($params)
     {
         if (isset($params['html'])) {
-            if (strpos($params['html'], '[argsellers]') !== false) {
+            $has_vendedores = (strpos($params['html'], '%vendedores%') !== false || strpos($params['html'], '[argsellers]') !== false);
+            if ($has_vendedores) {
                 $grid_html = $this->renderSellersGrid();
                 if (!empty($grid_html)) {
+                    $params['html'] = str_replace('%vendedores%', $grid_html, $params['html']);
                     $params['html'] = str_replace('[argsellers]', $grid_html, $params['html']);
                 }
             }
