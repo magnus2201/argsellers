@@ -84,18 +84,7 @@ class AdminArgsSellersController extends ModuleAdminController
     public function renderList()
     {
         $list_html = parent::renderList();
-
-        $banner_html = '
-        <div class="panel" style="margin-top: 25px; border-left: 5px solid #0284c7; background: #f0f9ff; padding: 22px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
-            <h3 style="margin-top: 0; margin-bottom: 10px; color: #0284c7; font-size: 20px; font-weight: 700; display: flex; align-items: center;">
-                <i class="icon-info-circle" style="font-size: 24px; margin-right: 10px;"></i>
-                Instrucciones de Uso
-            </h3>
-            <p style="font-size: 19px; font-weight: 600; color: #1e293b; margin: 0; line-height: 1.5;">
-                Para insertar el bloque de vendedores en la página escribí <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">%vendedores%</code> o <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">[argsellers]</code> en el Page builder
-            </p>
-        </div>';
-
+        $banner_html = Argsellers::getInstructionBanner();
         return $list_html . $banner_html;
     }
 

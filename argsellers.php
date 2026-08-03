@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '3.2.1';
+        $this->version = '3.3.0';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -30,7 +30,7 @@ class Argsellers extends Module
         parent::__construct();
 
         $this->displayName = $this->l('Gestor de Vendedores');
-        $this->description = $this->l('Administración dinámica y visual de los asesores comerciales mediante %vendedores%.');
+        $this->description = $this->l('Administración dinámica y visual de los asesores comerciales mediante shortcodes personalizados entre % %.');
 
         $this->ps_versions_compliancy = array('min' => '1.7.0.0', 'max' => defined('_PS_VERSION_') ? _PS_VERSION_ : '1.7.99.99');
     }
@@ -56,6 +56,7 @@ class Argsellers extends Module
         Configuration::updateValue('ARGSELLERS_PHONE_PREFIX', '+54 9 11');
         Configuration::updateValue('ARGSELLERS_EMAIL_SUFFIX', '@argseguridad.com');
         Configuration::updateValue('ARGSELLERS_SECTORS', json_encode(array('Ventas', 'Gremio', 'Proyectos', 'Revendedores', 'Asesoría Técnica', 'Mayorista')));
+        Configuration::updateValue('ARGSELLERS_SHORTCODES', json_encode(array('vendedores')));
 
         if (!$this->installTab()) {
             return false;
@@ -102,6 +103,7 @@ class Argsellers extends Module
         Configuration::deleteByName('ARGSELLERS_PHONE_PREFIX');
         Configuration::deleteByName('ARGSELLERS_EMAIL_SUFFIX');
         Configuration::deleteByName('ARGSELLERS_SECTORS');
+        Configuration::deleteByName('ARGSELLERS_SHORTCODES');
 
         $this->uninstallTab();
 
@@ -155,6 +157,21 @@ class Argsellers extends Module
                 }
             }
 
+            $new_shortcode = trim(Tools::getValue('new_shortcode_name'));
+            if (!empty($new_shortcode)) {
+                $clean_sc = trim(str_replace('%', '', $new_shortcode));
+                if (!empty($clean_sc)) {
+                    $shortcodes = json_decode(Configuration::get('ARGSELLERS_SHORTCODES'), true);
+                    if (!is_array($shortcodes)) {
+                        $shortcodes = array('vendedores');
+                    }
+                    if (!in_array($clean_sc, $shortcodes)) {
+                        $shortcodes[] = $clean_sc;
+                        Configuration::updateValue('ARGSELLERS_SHORTCODES', json_encode($shortcodes));
+                    }
+                }
+            }
+
             $output .= $this->displayConfirmation($this->l('Ajustes guardados correctamente.'));
         }
 
@@ -170,7 +187,22 @@ class Argsellers extends Module
             }
         }
 
-        return $output . $this->renderConfigForm();
+        if (Tools::isSubmit('delete_shortcode')) {
+            $sc_to_delete = trim(str_replace('%', '', Tools::getValue('delete_shortcode')));
+            $shortcodes = json_decode(Configuration::get('ARGSELLERS_SHORTCODES'), true);
+            if (is_array($shortcodes)) {
+                $shortcodes = array_values(array_filter($shortcodes, function($sc) use ($sc_to_delete) {
+                    return $sc !== $sc_to_delete;
+                }));
+                if (empty($shortcodes)) {
+                    $shortcodes = array('vendedores');
+                }
+                Configuration::updateValue('ARGSELLERS_SHORTCODES', json_encode($shortcodes));
+                $output .= $this->displayConfirmation($this->l('Shortcode eliminado correctamente.'));
+            }
+        }
+
+        return $output . $this->renderConfigForm() . self::getInstructionBanner();
     }
 
     protected function renderConfigForm()
@@ -186,6 +218,19 @@ class Argsellers extends Module
             $sectors_html .= '<li style="margin-bottom: 5px; background: #f8f9fa; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-right: 8px;">' . htmlspecialchars($sector) . ' <a href="' . $delete_url . '" style="color: #dc3545; margin-left: 8px; font-weight: bold;" onclick="return confirm(\'¿Eliminar este sector?\');">&times;</a></li>';
         }
         $sectors_html .= '</ul></div>';
+
+        $shortcodes = json_decode(Configuration::get('ARGSELLERS_SHORTCODES'), true);
+        if (!is_array($shortcodes) || empty($shortcodes)) {
+            $shortcodes = array('vendedores');
+        }
+
+        $shortcodes_html = '<div style="margin-bottom: 20px;"><h4>Shortcodes Personalizados Activos:</h4><ul style="list-style: none; padding-left: 0;">';
+        foreach ($shortcodes as $sc) {
+            $sc_clean = trim(str_replace('%', '', $sc));
+            $delete_url = $this->context->link->getAdminLink('AdminModules', true) . '&configure=' . $this->name . '&delete_shortcode=' . urlencode($sc_clean);
+            $shortcodes_html .= '<li style="margin-bottom: 5px; background: #e0f2fe; color: #0284c7; padding: 6px 14px; border-radius: 6px; display: inline-block; margin-right: 8px; font-weight: bold; border: 1px solid #bae6fd;">%' . htmlspecialchars($sc_clean) . '% <a href="' . $delete_url . '" style="color: #dc3545; margin-left: 10px; font-weight: bold;" onclick="return confirm(\'¿Eliminar este shortcode?\');">&times;</a></li>';
+        }
+        $shortcodes_html .= '</ul></div>';
 
         $fields_form = array(
             'form' => array(
@@ -219,6 +264,17 @@ class Argsellers extends Module
                         'name' => 'new_sector_name',
                         'desc' => $this->l('Escribe un nuevo sector (ej. Soporte Post-Venta) y haz clic en Guardar para añadirlo a las opciones.'),
                     ),
+                    array(
+                        'type' => 'free',
+                        'label' => $this->l('Shortcodes Personalizados Activos'),
+                        'name' => 'shortcodes_list_html',
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Añadir Nuevo Shortcode (se envolverá automáticamente en % %)'),
+                        'name' => 'new_shortcode_name',
+                        'desc' => $this->l('Escribe solo el nombre interno (ej: "vendedores", "asesores", "equipo"). Se guardará automáticamente como %nombre%.'),
+                    ),
                 ),
                 'submit' => array(
                     'title' => $this->l('Guardar Ajustes'),
@@ -242,19 +298,58 @@ class Argsellers extends Module
         $helper->fields_value['ARGSELLERS_EMAIL_SUFFIX'] = Configuration::get('ARGSELLERS_EMAIL_SUFFIX');
         $helper->fields_value['sectors_list_html'] = $sectors_html;
         $helper->fields_value['new_sector_name'] = '';
+        $helper->fields_value['shortcodes_list_html'] = $shortcodes_html;
+        $helper->fields_value['new_shortcode_name'] = '';
 
-        $banner_html = '
+        return $helper->generateForm(array($fields_form));
+    }
+
+    public static function getInstructionBanner()
+    {
+        $shortcodes = json_decode(Configuration::get('ARGSELLERS_SHORTCODES'), true);
+        if (!is_array($shortcodes) || empty($shortcodes)) {
+            $shortcodes = array('vendedores');
+        }
+
+        $badges_html = '';
+        foreach ($shortcodes as $idx => $sc) {
+            $sc_clean = trim(str_replace('%', '', $sc));
+            if ($idx > 0) {
+                $badges_html .= ' o ';
+            }
+            $badges_html .= '<code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">%' . htmlspecialchars($sc_clean) . '%</code>';
+        }
+
+        return '
         <div class="panel" style="margin-top: 25px; border-left: 5px solid #0284c7; background: #f0f9ff; padding: 22px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
             <h3 style="margin-top: 0; margin-bottom: 10px; color: #0284c7; font-size: 20px; font-weight: 700; display: flex; align-items: center;">
                 <i class="icon-info-circle" style="font-size: 24px; margin-right: 10px;"></i>
                 Instrucciones de Uso
             </h3>
             <p style="font-size: 19px; font-weight: 600; color: #1e293b; margin: 0; line-height: 1.5;">
-                Para insertar el bloque de vendedores en la página escribí <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">%vendedores%</code> o <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">[argsellers]</code> en el Page builder
+                Para insertar el bloque de vendedores en la página escribí ' . $badges_html . ' en el Page builder
             </p>
         </div>';
+    }
 
-        return $helper->generateForm(array($fields_form)) . $banner_html;
+    public function getActiveShortcodePatterns()
+    {
+        $shortcodes = json_decode(Configuration::get('ARGSELLERS_SHORTCODES'), true);
+        if (!is_array($shortcodes) || empty($shortcodes)) {
+            $shortcodes = array('vendedores');
+        }
+
+        $patterns = array();
+        foreach ($shortcodes as $sc) {
+            $clean = trim(str_replace('%', '', $sc));
+            if (!empty($clean)) {
+                $patterns[] = '%' . $clean . '%';
+            }
+        }
+        if (empty($patterns)) {
+            $patterns = array('%vendedores%');
+        }
+        return $patterns;
     }
 
     public function hookDisplayHeader()
@@ -276,8 +371,16 @@ class Argsellers extends Module
 
     public function smartyOutputFilter($output, $smarty)
     {
-        $has_vendedores = (strpos($output, '%vendedores%') !== false || strpos($output, '[argsellers]') !== false);
-        if (!$has_vendedores) {
+        $patterns = $this->getActiveShortcodePatterns();
+        $has_match = false;
+        foreach ($patterns as $pattern) {
+            if (strpos($output, $pattern) !== false) {
+                $has_match = true;
+                break;
+            }
+        }
+
+        if (!$has_match) {
             return $output;
         }
 
@@ -286,8 +389,9 @@ class Argsellers extends Module
             return $output;
         }
 
-        $output = str_replace('%vendedores%', $grid_html, $output);
-        $output = str_replace('[argsellers]', $grid_html, $output);
+        foreach ($patterns as $pattern) {
+            $output = str_replace($pattern, $grid_html, $output);
+        }
 
         return $output;
     }
@@ -295,12 +399,20 @@ class Argsellers extends Module
     public function hookFilterHtmlContent($params)
     {
         if (isset($params['html'])) {
-            $has_vendedores = (strpos($params['html'], '%vendedores%') !== false || strpos($params['html'], '[argsellers]') !== false);
-            if ($has_vendedores) {
+            $patterns = $this->getActiveShortcodePatterns();
+            $has_match = false;
+            foreach ($patterns as $pattern) {
+                if (strpos($params['html'], $pattern) !== false) {
+                    $has_match = true;
+                    break;
+                }
+            }
+            if ($has_match) {
                 $grid_html = $this->renderSellersGrid();
                 if (!empty($grid_html)) {
-                    $params['html'] = str_replace('%vendedores%', $grid_html, $params['html']);
-                    $params['html'] = str_replace('[argsellers]', $grid_html, $params['html']);
+                    foreach ($patterns as $pattern) {
+                        $params['html'] = str_replace($pattern, $grid_html, $params['html']);
+                    }
                 }
             }
         }
@@ -373,11 +485,11 @@ class Argsellers extends Module
     public function runUpgradeModule()
     {
         if (class_exists('Module')) {
-            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-2.7.5.php';
+            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.3.0.php';
             if (file_exists($up_file)) {
                 include_once($up_file);
-                if (function_exists('upgrade_module_2_7_5')) {
-                    return upgrade_module_2_7_5($this);
+                if (function_exists('upgrade_module_3_3_0')) {
+                    return upgrade_module_3_3_0($this);
                 }
             }
         }
