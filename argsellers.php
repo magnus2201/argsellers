@@ -24,7 +24,7 @@ class Argsellers extends Module implements WidgetInterface
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '3.0.0';
+        $this->version = '3.0.1';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -76,6 +76,9 @@ class Argsellers extends Module implements WidgetInterface
             $this->registerHook('displayHome') &&
             $this->registerHook('displayLeftColumn') &&
             $this->registerHook('displayRightColumn') &&
+            $this->registerHook('actionElementorInit') &&
+            $this->registerHook('actionElementorWidgetInit') &&
+            $this->registerHook('actionAdminControllerSetMedia') &&
             $this->registerHook('filterHtmlContent');
     }
 
@@ -102,15 +105,51 @@ class Argsellers extends Module implements WidgetInterface
 
     public function registerIqitElementorCustomWidget()
     {
-        $target_dir = _PS_MODULE_DIR_ . 'iqitelementor/views/templates/widgets/custom/';
-        if (file_exists(_PS_MODULE_DIR_ . 'iqitelementor/')) {
+        $target_dirs = array(
+            _PS_MODULE_DIR_ . 'iqitelementor/views/templates/widgets/custom/',
+            _PS_ALL_THEMES_DIR_ . 'warehouse/modules/iqitelementor/views/templates/widgets/custom/'
+        );
+
+        foreach ($target_dirs as $target_dir) {
             if (!file_exists($target_dir)) {
                 @mkdir($target_dir, 0755, true);
             }
-            $target_file = $target_dir . 'argsellers.tpl';
-            $tpl_content = '{* Custom Elementor Widget for Gestor de Vendedores *}' . "\n" . '{widget name="argsellers"}';
-            @file_put_contents($target_file, $tpl_content);
+            if (file_exists($target_dir)) {
+                $target_file = $target_dir . 'argsellers.tpl';
+                $tpl_content = '{* Custom Elementor Widget for Gestor de Vendedores *}' . "\n" . '{widget name="argsellers"}';
+                @file_put_contents($target_file, $tpl_content);
+            }
         }
+    }
+
+    public function registerElementorWidget()
+    {
+        if (class_exists('\Elementor\Plugin') && isset(\Elementor\Plugin::$instance->widgets_manager)) {
+            $widget_file = _PS_MODULE_DIR_ . $this->name . '/classes/ElementorWidgetArgsellers.php';
+            if (file_exists($widget_file)) {
+                include_once($widget_file);
+                if (class_exists('ElementorWidgetArgsellers')) {
+                    try {
+                        \Elementor\Plugin::$instance->widgets_manager->register_widget_type(new ElementorWidgetArgsellers());
+                    } catch (Exception $e) {}
+                }
+            }
+        }
+    }
+
+    public function hookActionElementorInit()
+    {
+        $this->registerElementorWidget();
+    }
+
+    public function hookActionElementorWidgetInit($params)
+    {
+        $this->registerElementorWidget();
+    }
+
+    public function hookActionAdminControllerSetMedia($params)
+    {
+        $this->registerElementorWidget();
     }
 
     public function uninstall()
@@ -297,6 +336,8 @@ class Argsellers extends Module implements WidgetInterface
 
     public function hookDisplayHeader($params)
     {
+        $this->registerElementorWidget();
+
         $css_uri = 'modules/' . $this->name . '/views/css/front.css?v=' . $this->version;
         $this->context->controller->registerStylesheet(
             'modules-argsellers-front',
@@ -441,11 +482,11 @@ class Argsellers extends Module implements WidgetInterface
     public function runUpgradeModule()
     {
         if (class_exists('Module')) {
-            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.0.0.php';
+            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.0.1.php';
             if (file_exists($up_file)) {
                 include_once($up_file);
-                if (function_exists('upgrade_module_3_0_0')) {
-                    return upgrade_module_3_0_0($this);
+                if (function_exists('upgrade_module_3_0_1')) {
+                    return upgrade_module_3_0_1($this);
                 }
             }
         }
