@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '3.1.1';
+        $this->version = '3.1.2';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -30,7 +30,7 @@ class Argsellers extends Module
         parent::__construct();
 
         $this->displayName = $this->l('Gestor de Vendedores');
-        $this->description = $this->l('Administración dinámica y visual de los asesores comerciales mediante {vendedores} y [argsellers].');
+        $this->description = $this->l('Administración dinámica y visual de los asesores comerciales mediante %vendedores%.');
 
         $this->ps_versions_compliancy = array('min' => '1.7.0.0', 'max' => defined('_PS_VERSION_') ? _PS_VERSION_ : '1.7.99.99');
     }
@@ -192,7 +192,7 @@ class Argsellers extends Module
                 Instrucciones de Uso
             </h3>
             <p style="font-size: 19px; font-weight: 600; color: #1e293b; margin: 0; line-height: 1.5;">
-                Para insertar el bloque de vendedores en la página escribí <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">{vendedores}</code> o <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">[argsellers]</code> en el Page builder
+                Para insertar el bloque de vendedores en la página escribí <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">%vendedores%</code> en el Page builder
             </p>
         </div>';
 
@@ -297,15 +297,6 @@ class Argsellers extends Module
         );
 
         if (isset($this->context->smarty)) {
-            // Register {vendedores} as a native Smarty function plugin so Smarty doesn't strip it
-            try {
-                $this->context->smarty->registerPlugin(
-                    'function',
-                    'vendedores',
-                    array($this, 'smartyVendedoresFunction')
-                );
-            } catch (Exception $e) {}
-
             $this->context->smarty->registerFilter(
                 'output',
                 array($this, 'smartyOutputFilter')
@@ -313,14 +304,9 @@ class Argsellers extends Module
         }
     }
 
-    public function smartyVendedoresFunction($params, $smarty)
-    {
-        return $this->renderSellersGrid();
-    }
-
     public function smartyOutputFilter($output, $smarty)
     {
-        $has_vendedores = (strpos($output, '{vendedores}') !== false || strpos($output, '[argsellers]') !== false);
+        $has_vendedores = (strpos($output, '%vendedores%') !== false || strpos($output, '[argsellers]') !== false || strpos($output, '{vendedores}') !== false);
         if (!$has_vendedores) {
             return $output;
         }
@@ -330,8 +316,9 @@ class Argsellers extends Module
             return $output;
         }
 
-        $output = str_replace('{vendedores}', $grid_html, $output);
+        $output = str_replace('%vendedores%', $grid_html, $output);
         $output = str_replace('[argsellers]', $grid_html, $output);
+        $output = str_replace('{vendedores}', $grid_html, $output);
 
         return $output;
     }
@@ -339,12 +326,13 @@ class Argsellers extends Module
     public function hookFilterHtmlContent($params)
     {
         if (isset($params['html'])) {
-            $has_vendedores = (strpos($params['html'], '{vendedores}') !== false || strpos($params['html'], '[argsellers]') !== false);
+            $has_vendedores = (strpos($params['html'], '%vendedores%') !== false || strpos($params['html'], '[argsellers]') !== false || strpos($params['html'], '{vendedores}') !== false);
             if ($has_vendedores) {
                 $grid_html = $this->renderSellersGrid();
                 if (!empty($grid_html)) {
-                    $params['html'] = str_replace('{vendedores}', $grid_html, $params['html']);
+                    $params['html'] = str_replace('%vendedores%', $grid_html, $params['html']);
                     $params['html'] = str_replace('[argsellers]', $grid_html, $params['html']);
+                    $params['html'] = str_replace('{vendedores}', $grid_html, $params['html']);
                 }
             }
         }
@@ -415,11 +403,11 @@ class Argsellers extends Module
     public function runUpgradeModule()
     {
         if (class_exists('Module')) {
-            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.1.1.php';
+            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.1.2.php';
             if (file_exists($up_file)) {
                 include_once($up_file);
-                if (function_exists('upgrade_module_3_1_1')) {
-                    return upgrade_module_3_1_1($this);
+                if (function_exists('upgrade_module_3_1_2')) {
+                    return upgrade_module_3_1_2($this);
                 }
             }
         }

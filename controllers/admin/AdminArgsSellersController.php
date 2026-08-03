@@ -92,7 +92,7 @@ class AdminArgsSellersController extends ModuleAdminController
                 Instrucciones de Uso
             </h3>
             <p style="font-size: 19px; font-weight: 600; color: #1e293b; margin: 0; line-height: 1.5;">
-                Para insertar el bloque de vendedores en la pagina Escribi <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">{vendedores}</code> en el Page builder
+                Para insertar el bloque de vendedores en la pagina escribí <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">%vendedores%</code> en el Page builder
             </p>
         </div>';
 
