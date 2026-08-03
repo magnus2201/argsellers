@@ -16,15 +16,13 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-use PrestaShop\PrestaShop\Core\Module\WidgetInterface;
-
-class Argsellers extends Module implements WidgetInterface
+class Argsellers extends Module
 {
     public function __construct()
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '3.0.1';
+        $this->version = '3.1.0';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -32,7 +30,7 @@ class Argsellers extends Module implements WidgetInterface
         parent::__construct();
 
         $this->displayName = $this->l('Gestor de Vendedores');
-        $this->description = $this->l('Administración dinámica de asesores comerciales como Widget de Elementor y por shortcodes.');
+        $this->description = $this->l('Administración dinámica y visual de los asesores comerciales mediante {vendedores}.');
 
         $this->ps_versions_compliancy = array('min' => '1.7.0.0', 'max' => defined('_PS_VERSION_') ? _PS_VERSION_ : '1.7.99.99');
     }
@@ -69,16 +67,9 @@ class Argsellers extends Module implements WidgetInterface
         }
 
         $this->seedDefaultSellers();
-        $this->registerIqitElementorCustomWidget();
 
         return parent::install() &&
             $this->registerHook('displayHeader') &&
-            $this->registerHook('displayHome') &&
-            $this->registerHook('displayLeftColumn') &&
-            $this->registerHook('displayRightColumn') &&
-            $this->registerHook('actionElementorInit') &&
-            $this->registerHook('actionElementorWidgetInit') &&
-            $this->registerHook('actionAdminControllerSetMedia') &&
             $this->registerHook('filterHtmlContent');
     }
 
@@ -101,55 +92,6 @@ class Argsellers extends Module implements WidgetInterface
                 ");
             }
         }
-    }
-
-    public function registerIqitElementorCustomWidget()
-    {
-        $target_dirs = array(
-            _PS_MODULE_DIR_ . 'iqitelementor/views/templates/widgets/custom/',
-            _PS_ALL_THEMES_DIR_ . 'warehouse/modules/iqitelementor/views/templates/widgets/custom/'
-        );
-
-        foreach ($target_dirs as $target_dir) {
-            if (!file_exists($target_dir)) {
-                @mkdir($target_dir, 0755, true);
-            }
-            if (file_exists($target_dir)) {
-                $target_file = $target_dir . 'argsellers.tpl';
-                $tpl_content = '{* Custom Elementor Widget for Gestor de Vendedores *}' . "\n" . '{widget name="argsellers"}';
-                @file_put_contents($target_file, $tpl_content);
-            }
-        }
-    }
-
-    public function registerElementorWidget()
-    {
-        if (class_exists('\Elementor\Plugin') && isset(\Elementor\Plugin::$instance->widgets_manager)) {
-            $widget_file = _PS_MODULE_DIR_ . $this->name . '/classes/ElementorWidgetArgsellers.php';
-            if (file_exists($widget_file)) {
-                include_once($widget_file);
-                if (class_exists('ElementorWidgetArgsellers')) {
-                    try {
-                        \Elementor\Plugin::$instance->widgets_manager->register_widget_type(new ElementorWidgetArgsellers());
-                    } catch (Exception $e) {}
-                }
-            }
-        }
-    }
-
-    public function hookActionElementorInit()
-    {
-        $this->registerElementorWidget();
-    }
-
-    public function hookActionElementorWidgetInit($params)
-    {
-        $this->registerElementorWidget();
-    }
-
-    public function hookActionAdminControllerSetMedia($params)
-    {
-        $this->registerElementorWidget();
     }
 
     public function uninstall()
@@ -243,7 +185,18 @@ class Argsellers extends Module implements WidgetInterface
             'ARGSELLERS_BACKUP_VERSION' => Configuration::get('ARGSELLERS_BACKUP_VERSION'),
         ));
 
-        return $output . $this->renderConfigForm();
+        $banner_html = '
+        <div class="panel" style="margin-top: 25px; border-left: 5px solid #0284c7; background: #f0f9ff; padding: 22px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
+            <h3 style="margin-top: 0; margin-bottom: 10px; color: #0284c7; font-size: 20px; font-weight: 700; display: flex; align-items: center;">
+                <i class="icon-info-circle" style="font-size: 24px; margin-right: 10px;"></i>
+                Instrucciones de Uso
+            </h3>
+            <p style="font-size: 19px; font-weight: 600; color: #1e293b; margin: 0; line-height: 1.5;">
+                Para insertar el bloque de vendedores en la página Escribí <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">{vendedores}</code> en el Page builder
+            </p>
+        </div>';
+
+        return $output . $this->renderConfigForm() . $banner_html;
     }
 
     public function renderConfigForm()
@@ -336,8 +289,6 @@ class Argsellers extends Module implements WidgetInterface
 
     public function hookDisplayHeader($params)
     {
-        $this->registerElementorWidget();
-
         $css_uri = 'modules/' . $this->name . '/views/css/front.css?v=' . $this->version;
         $this->context->controller->registerStylesheet(
             'modules-argsellers-front',
@@ -355,7 +306,8 @@ class Argsellers extends Module implements WidgetInterface
 
     public function smartyOutputFilter($output, $smarty)
     {
-        if (strpos($output, '[argsellers]') === false) {
+        $has_vendedores = (strpos($output, '{vendedores}') !== false || strpos($output, '[argsellers]') !== false);
+        if (!$has_vendedores) {
             return $output;
         }
 
@@ -364,19 +316,20 @@ class Argsellers extends Module implements WidgetInterface
             return $output;
         }
 
-        return str_replace(
-            '[argsellers]',
-            $grid_html,
-            $output
-        );
+        $output = str_replace('{vendedores}', $grid_html, $output);
+        $output = str_replace('[argsellers]', $grid_html, $output);
+
+        return $output;
     }
 
     public function hookFilterHtmlContent($params)
     {
         if (isset($params['html'])) {
-            if (strpos($params['html'], '[argsellers]') !== false) {
+            $has_vendedores = (strpos($params['html'], '{vendedores}') !== false || strpos($params['html'], '[argsellers]') !== false);
+            if ($has_vendedores) {
                 $grid_html = $this->renderSellersGrid();
                 if (!empty($grid_html)) {
+                    $params['html'] = str_replace('{vendedores}', $grid_html, $params['html']);
                     $params['html'] = str_replace('[argsellers]', $grid_html, $params['html']);
                 }
             }
@@ -384,54 +337,22 @@ class Argsellers extends Module implements WidgetInterface
         return $params;
     }
 
-    public function renderWidget($hookName, array $configuration)
-    {
-        return $this->renderSellersGrid();
-    }
-
-    public function getWidgetVariables($hookName, array $configuration)
-    {
-        return array(
-            'sellers' => $this->getSellersData()
-        );
-    }
-
-    public function hookDisplayHome($params)
-    {
-        return $this->renderSellersGrid();
-    }
-
-    public function hookDisplayLeftColumn($params)
-    {
-        return $this->renderSellersGrid();
-    }
-
-    public function hookDisplayRightColumn($params)
-    {
-        return $this->renderSellersGrid();
-    }
-
-    public function getSellersData()
-    {
-        $this->seedDefaultSellers();
-        $sellers = Db::getInstance()->executeS('
-            SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
-            WHERE `active` = 1
-            ORDER BY `position` ASC
-        ');
-        if (empty($sellers)) {
-            $sellers = Db::getInstance()->executeS('
-                SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
-                ORDER BY `position` ASC
-            ');
-        }
-        return $sellers;
-    }
-
     public function renderSellersGrid()
     {
         try {
-            $sellers = $this->getSellersData();
+            $sellers = Db::getInstance()->executeS('
+                SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
+                WHERE `active` = 1
+                ORDER BY `position` ASC
+            ');
+
+            if (empty($sellers)) {
+                $sellers = Db::getInstance()->executeS('
+                    SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
+                    ORDER BY `position` ASC
+                ');
+            }
+
             if (empty($sellers)) {
                 return '';
             }
@@ -471,8 +392,6 @@ class Argsellers extends Module implements WidgetInterface
                 'argsellers_path' => $this->_path,
             ));
 
-            $this->registerIqitElementorCustomWidget();
-
             return $this->display(__FILE__, 'views/templates/hook/argsellers.tpl');
         } catch (Exception $e) {
             return '<!-- argsellers render error: ' . htmlspecialchars($e->getMessage()) . ' -->';
@@ -482,11 +401,11 @@ class Argsellers extends Module implements WidgetInterface
     public function runUpgradeModule()
     {
         if (class_exists('Module')) {
-            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.0.1.php';
+            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.1.0.php';
             if (file_exists($up_file)) {
                 include_once($up_file);
-                if (function_exists('upgrade_module_3_0_1')) {
-                    return upgrade_module_3_0_1($this);
+                if (function_exists('upgrade_module_3_1_0')) {
+                    return upgrade_module_3_1_0($this);
                 }
             }
         }
