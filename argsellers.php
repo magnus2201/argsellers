@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '3.1.2';
+        $this->version = '3.2.0';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -30,7 +30,7 @@ class Argsellers extends Module
         parent::__construct();
 
         $this->displayName = $this->l('Gestor de Vendedores');
-        $this->description = $this->l('Administración dinámica y visual de los asesores comerciales mediante %vendedores%.');
+        $this->description = $this->l('Administración dinámica y visual de los asesores comerciales mediante shortcodes.');
 
         $this->ps_versions_compliancy = array('min' => '1.7.0.0', 'max' => defined('_PS_VERSION_') ? _PS_VERSION_ : '1.7.99.99');
     }
@@ -158,136 +158,95 @@ class Argsellers extends Module
             $output .= $this->displayConfirmation($this->l('Ajustes guardados correctamente.'));
         }
 
-        $github_repo = Configuration::get('ARGSELLERS_GITHUB_REPO');
-        if (!$github_repo) {
-            $github_repo = 'magnus2201/argsellers';
-        }
-        $github_token = Configuration::get('ARGSELLERS_GITHUB_TOKEN');
-
-        if (Tools::isSubmit('submitArgsellersGithubConfig')) {
-            $github_repo = trim(Tools::getValue('ARGSELLERS_GITHUB_REPO'));
-            $github_token = trim(Tools::getValue('ARGSELLERS_GITHUB_TOKEN'));
-
-            Configuration::updateValue('ARGSELLERS_GITHUB_REPO', $github_repo);
-            Configuration::updateValue('ARGSELLERS_GITHUB_TOKEN', $github_token);
-
-            $output .= $this->displayConfirmation($this->l('Configuración de GitHub guardada.'));
+        if (Tools::isSubmit('delete_sector')) {
+            $sector_to_delete = Tools::getValue('delete_sector');
+            $sectors = json_decode(Configuration::get('ARGSELLERS_SECTORS'), true);
+            if (is_array($sectors)) {
+                $sectors = array_values(array_filter($sectors, function($s) use ($sector_to_delete) {
+                    return $s !== $sector_to_delete;
+                }));
+                Configuration::updateValue('ARGSELLERS_SECTORS', json_encode($sectors));
+                $output .= $this->displayConfirmation($this->l('Sector eliminado correctamente.'));
+            }
         }
 
-        $this->context->smarty->assign(array(
-            'ARGSELLERS_PHONE_PREFIX' => Configuration::get('ARGSELLERS_PHONE_PREFIX'),
-            'ARGSELLERS_EMAIL_SUFFIX' => Configuration::get('ARGSELLERS_EMAIL_SUFFIX'),
-            'ARGSELLERS_SECTORS' => json_decode(Configuration::get('ARGSELLERS_SECTORS'), true),
-            'ARGSELLERS_GITHUB_REPO' => $github_repo,
-            'ARGSELLERS_GITHUB_TOKEN' => $github_token,
-            'ARGSELLERS_ADMIN_URL' => $this->context->link->getAdminLink('AdminArgsSellers'),
-            'ARGSELLERS_VERSION' => $this->version,
-            'ARGSELLERS_BACKUP_VERSION' => Configuration::get('ARGSELLERS_BACKUP_VERSION'),
-        ));
-
-        $banner_html = '
-        <div class="panel" style="margin-top: 25px; border-left: 5px solid #0284c7; background: #f0f9ff; padding: 22px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
-            <h3 style="margin-top: 0; margin-bottom: 10px; color: #0284c7; font-size: 20px; font-weight: 700; display: flex; align-items: center;">
-                <i class="icon-info-circle" style="font-size: 24px; margin-right: 10px;"></i>
-                Instrucciones de Uso
-            </h3>
-            <p style="font-size: 19px; font-weight: 600; color: #1e293b; margin: 0; line-height: 1.5;">
-                Para insertar el bloque de vendedores en la página escribí <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">%vendedores%</code> en el Page builder
-            </p>
-        </div>';
-
-        return $output . $this->renderConfigForm() . $banner_html;
+        return $output . $this->renderConfigForm();
     }
 
-    public function renderConfigForm()
+    protected function renderConfigForm()
     {
+        $sectors = json_decode(Configuration::get('ARGSELLERS_SECTORS'), true);
+        if (!is_array($sectors)) {
+            $sectors = array();
+        }
+
+        $sectors_html = '<div style="margin-bottom: 20px;"><h4>Sectores / Roles Disponibles:</h4><ul style="list-style: none; padding-left: 0;">';
+        foreach ($sectors as $sector) {
+            $delete_url = $this->context->link->getAdminLink('AdminModules', true) . '&configure=' . $this->name . '&delete_sector=' . urlencode($sector);
+            $sectors_html .= '<li style="margin-bottom: 5px; background: #f8f9fa; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-right: 8px;">' . htmlspecialchars($sector) . ' <a href="' . $delete_url . '" style="color: #dc3545; margin-left: 8px; font-weight: bold;" onclick="return confirm(\'¿Eliminar este sector?\');">&times;</a></li>';
+        }
+        $sectors_html .= '</ul></div>';
+
         $fields_form = array(
             'form' => array(
                 'legend' => array(
-                    'title' => $this->l('Configuración Global de Asesores Comerciales'),
-                    'icon' => 'icon-cogs'
+                    'title' => $this->l('Configuración General de Vendedores'),
+                    'icon' => 'icon-cogs',
                 ),
                 'input' => array(
                     array(
                         'type' => 'text',
-                        'label' => $this->l('Prefijo de WhatsApp por Defecto'),
+                        'label' => $this->l('Prefijo de Teléfono Global'),
                         'name' => 'ARGSELLERS_PHONE_PREFIX',
-                        'desc' => $this->l('Se antepondrá automáticamente al número ingresado (ej: +54 9 11).'),
+                        'desc' => $this->l('Prefijo para todos los números (ej. +54 9 11).'),
+                        'required' => true,
                     ),
                     array(
                         'type' => 'text',
-                        'label' => $this->l('Sufijo de Email por Defecto'),
+                        'label' => $this->l('Sufijo de Correo Electrónico Global'),
                         'name' => 'ARGSELLERS_EMAIL_SUFFIX',
-                        'desc' => $this->l('Se completará automáticamente si solo ingresas el usuario de correo.'),
+                        'desc' => $this->l('Dominio de correo por defecto (ej. @argseguridad.com).'),
+                        'required' => true,
+                    ),
+                    array(
+                        'type' => 'free',
+                        'label' => $this->l('Sectores Actuales'),
+                        'name' => 'sectors_list_html',
                     ),
                     array(
                         'type' => 'text',
-                        'label' => $this->l('Agregar Nuevo Sector / Rol'),
+                        'label' => $this->l('Añadir Nuevo Sector / Rol'),
                         'name' => 'new_sector_name',
-                        'desc' => $this->l('Escribe un nuevo sector (ej: "Soporte", "Gremio") para agregarlo a la lista de selección.'),
+                        'desc' => $this->l('Escribe un nuevo sector (ej. Soporte Post-Venta) y haz clic en Guardar para añadirlo a las opciones.'),
                     ),
                 ),
                 'submit' => array(
                     'title' => $this->l('Guardar Ajustes'),
-                    'class' => 'btn btn-default pull-right'
-                )
-            ),
-        );
-
-        $fields_form_github = array(
-            'form' => array(
-                'legend' => array(
-                    'title' => $this->l('Auto-Actualizador desde GitHub Repository'),
-                    'icon' => 'icon-cloud-upload'
-                ),
-                'input' => array(
-                    array(
-                        'type' => 'text',
-                        'label' => $this->l('Repositorio GitHub (usuario/repo)'),
-                        'name' => 'ARGSELLERS_GITHUB_REPO',
-                        'desc' => $this->l('Ejemplo: magnus2201/argsellers'),
-                    ),
-                    array(
-                        'type' => 'text',
-                        'label' => $this->l('Token de Acceso Personal de GitHub (Opcional para repos privados)'),
-                        'name' => 'ARGSELLERS_GITHUB_TOKEN',
-                        'desc' => $this->l('Solo necesario si el repositorio de GitHub es privado (ej: ghp_xxxxxxxxxxxx).'),
-                    ),
-                ),
-                'submit' => array(
-                    'title' => $this->l('Guardar Configuración GitHub'),
                     'class' => 'btn btn-default pull-right',
-                    'name' => 'submitArgsellersGithubConfig'
-                )
+                ),
             ),
         );
 
         $helper = new HelperForm();
         $helper->show_toolbar = false;
         $helper->table = $this->table;
-        $lang = new Language((int)Configuration::get('PS_LANG_DEFAULT'));
-        $helper->default_form_language = $lang->id;
-        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') ? Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') : 0;
+        $helper->module = $this;
+        $helper->default_form_language = $this->context->language->id;
+        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG', 0);
         $helper->identifier = $this->identifier;
         $helper->submit_action = 'submitArgsellersConfig';
-        $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false) . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
+        $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false) . '&configure=' . $this->name;
         $helper->token = Tools::getAdminTokenLite('AdminModules');
-        $helper->tpl_vars = array(
-            'fields_value' => array(
-                'ARGSELLERS_PHONE_PREFIX' => Configuration::get('ARGSELLERS_PHONE_PREFIX'),
-                'ARGSELLERS_EMAIL_SUFFIX' => Configuration::get('ARGSELLERS_EMAIL_SUFFIX'),
-                'new_sector_name' => '',
-                'ARGSELLERS_GITHUB_REPO' => Configuration::get('ARGSELLERS_GITHUB_REPO') ? Configuration::get('ARGSELLERS_GITHUB_REPO') : 'magnus2201/argsellers',
-                'ARGSELLERS_GITHUB_TOKEN' => Configuration::get('ARGSELLERS_GITHUB_TOKEN'),
-            ),
-            'languages' => $this->context->controller->getLanguages(),
-            'id_language' => $this->context->language->id
-        );
 
-        return $helper->generateForm(array($fields_form, $fields_form_github));
+        $helper->fields_value['ARGSELLERS_PHONE_PREFIX'] = Configuration::get('ARGSELLERS_PHONE_PREFIX');
+        $helper->fields_value['ARGSELLERS_EMAIL_SUFFIX'] = Configuration::get('ARGSELLERS_EMAIL_SUFFIX');
+        $helper->fields_value['sectors_list_html'] = $sectors_html;
+        $helper->fields_value['new_sector_name'] = '';
+
+        return $helper->generateForm(array($fields_form));
     }
 
-    public function hookDisplayHeader($params)
+    public function hookDisplayHeader()
     {
         $css_uri = 'modules/' . $this->name . '/views/css/front.css?v=' . $this->version;
         $this->context->controller->registerStylesheet(
@@ -306,8 +265,7 @@ class Argsellers extends Module
 
     public function smartyOutputFilter($output, $smarty)
     {
-        $has_vendedores = (strpos($output, '%vendedores%') !== false || strpos($output, '[argsellers]') !== false || strpos($output, '{vendedores}') !== false);
-        if (!$has_vendedores) {
+        if (strpos($output, '[argsellers]') === false) {
             return $output;
         }
 
@@ -316,23 +274,20 @@ class Argsellers extends Module
             return $output;
         }
 
-        $output = str_replace('%vendedores%', $grid_html, $output);
-        $output = str_replace('[argsellers]', $grid_html, $output);
-        $output = str_replace('{vendedores}', $grid_html, $output);
-
-        return $output;
+        return str_replace(
+            '[argsellers]',
+            $grid_html,
+            $output
+        );
     }
 
     public function hookFilterHtmlContent($params)
     {
         if (isset($params['html'])) {
-            $has_vendedores = (strpos($params['html'], '%vendedores%') !== false || strpos($params['html'], '[argsellers]') !== false || strpos($params['html'], '{vendedores}') !== false);
-            if ($has_vendedores) {
+            if (strpos($params['html'], '[argsellers]') !== false) {
                 $grid_html = $this->renderSellersGrid();
                 if (!empty($grid_html)) {
-                    $params['html'] = str_replace('%vendedores%', $grid_html, $params['html']);
                     $params['html'] = str_replace('[argsellers]', $grid_html, $params['html']);
-                    $params['html'] = str_replace('{vendedores}', $grid_html, $params['html']);
                 }
             }
         }
@@ -342,6 +297,8 @@ class Argsellers extends Module
     public function renderSellersGrid()
     {
         try {
+            $this->seedDefaultSellers();
+
             $sellers = Db::getInstance()->executeS('
                 SELECT * FROM `' . _DB_PREFIX_ . 'argsellers`
                 WHERE `active` = 1
@@ -369,45 +326,45 @@ class Argsellers extends Module
                 $email_suffix = '@argseguridad.com';
             }
 
-            foreach ($sellers as &$s) {
-                $clean_phone = preg_replace('/[^0-9]/', '', $s['phone']);
-                if (substr($clean_phone, 0, 2) === '11' && strlen($clean_phone) == 10) {
-                    $clean_phone = '549' . $clean_phone;
-                } elseif (substr($clean_phone, 0, 3) === '549' || substr($clean_phone, 0, 2) === '54') {
-                    // Already formatted
-                } else {
-                    $clean_phone = preg_replace('/[^0-9]/', '', $phone_prefix . $clean_phone);
-                }
-                $s['wa_url'] = 'https://api.whatsapp.com/send?phone=' . $clean_phone . '&text=' . rawurlencode('Hola ' . $s['name'] . ', tengo una consulta desde la web.');
+            foreach ($sellers as &$seller) {
+                $raw_phone = preg_replace('/[^0-9]/', '', $seller['phone']);
+                $prefix_digits = preg_replace('/[^0-9]/', '', $phone_prefix);
+                $seller['clean_whatsapp'] = $prefix_digits . $raw_phone;
 
-                $s['qr_url'] = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($s['wa_url']);
-
-                if (empty($s['image'])) {
-                    $s['image_url'] = $this->_path . 'views/img/default.png';
-                } else {
-                    $s['image_url'] = $this->_path . 'views/img/' . $s['image'];
+                $formatted_num = $raw_phone;
+                if (strlen($raw_phone) >= 8) {
+                    $formatted_num = substr($raw_phone, 0, 4) . '-' . substr($raw_phone, 4);
                 }
+                $seller['formatted_phone'] = $phone_prefix . ' ' . $formatted_num;
+
+                $clean_email = trim($seller['email']);
+                if (strpos($clean_email, '@') === false) {
+                    $seller['full_email'] = trim($clean_email . $email_suffix);
+                } else {
+                    $seller['full_email'] = $clean_email;
+                }
+                $seller['gmail_url'] = 'https://mail.google.com/mail/?view=cm&fs=1&to=' . urlencode($seller['full_email']);
             }
 
             $this->context->smarty->assign(array(
-                'argsellers_list' => $sellers,
-                'argsellers_path' => $this->_path,
+                'argsellers' => $sellers,
+                'argsellers_img_path' => $this->context->link->getMediaLink('/modules/' . $this->name . '/views/img/')
             ));
 
             return $this->display(__FILE__, 'views/templates/hook/argsellers.tpl');
         } catch (Exception $e) {
-            return '<!-- argsellers render error: ' . htmlspecialchars($e->getMessage()) . ' -->';
+            return '';
         }
     }
 
     public function runUpgradeModule()
     {
         if (class_exists('Module')) {
-            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.1.2.php';
+            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-2.7.5.php';
             if (file_exists($up_file)) {
                 include_once($up_file);
-                if (function_exists('upgrade_module_3_1_2')) {
-                    return upgrade_module_3_1_2($this);
+                if (function_exists('upgrade_module_2_7_5')) {
+                    return upgrade_module_2_7_5($this);
                 }
             }
         }

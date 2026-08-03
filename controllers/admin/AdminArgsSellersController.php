@@ -81,24 +81,6 @@ class AdminArgsSellersController extends ModuleAdminController
         $this->_defaultOrderWay = 'ASC';
     }
 
-    public function renderList()
-    {
-        $list_html = parent::renderList();
-
-        $banner_html = '
-        <div class="panel" style="margin-top: 25px; border-left: 5px solid #0284c7; background: #f0f9ff; padding: 22px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
-            <h3 style="margin-top: 0; margin-bottom: 10px; color: #0284c7; font-size: 20px; font-weight: 700; display: flex; align-items: center;">
-                <i class="icon-info-circle" style="font-size: 24px; margin-right: 10px;"></i>
-                Instrucciones de Uso
-            </h3>
-            <p style="font-size: 19px; font-weight: 600; color: #1e293b; margin: 0; line-height: 1.5;">
-                Para insertar el bloque de vendedores en la pagina escribí <code style="font-size: 22px; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #bae6fd;">%vendedores%</code> en el Page builder
-            </p>
-        </div>';
-
-        return $list_html . $banner_html;
-    }
-
     public function initPageHeaderToolbar()
     {
         parent::initPageHeaderToolbar();
@@ -116,29 +98,13 @@ class AdminArgsSellersController extends ModuleAdminController
             'desc' => $this->l('Ajustes Globales'),
             'icon' => 'process-icon-cogs icon-cogs',
         );
-
-        // Rollback / Restore Previous Version button (if backup exists)
-        $backup_dir = _PS_MODULE_DIR_ . 'argsellers_backup/';
-        $backup_ver = Configuration::get('ARGSELLERS_BACKUP_VERSION');
-        if (file_exists($backup_dir . 'argsellers.php')) {
-            $this->page_header_toolbar_btn['rollback_module'] = array(
-                'href' => self::$currentIndex . '&action=rollbackModule&token=' . $this->token,
-                'desc' => sprintf($this->l('Versión Anterior (%s)'), $backup_ver ? 'v' . $backup_ver : 'Backup'),
-                'icon' => 'process-icon-undo icon-undo',
-            );
-        }
     }
 
     public function postProcess()
     {
-        // Intercept action=updateModule or action=rollbackModule
+        // Intercept action=updateModule from header toolbar or GET action
         if (Tools::getValue('action') === 'updateModule') {
             $this->processUpdateModule();
-            return;
-        }
-
-        if (Tools::getValue('action') === 'rollbackModule') {
-            $this->processRollbackModule();
             return;
         }
 
@@ -202,15 +168,6 @@ class AdminArgsSellersController extends ModuleAdminController
 
         // Version before update
         $version_before = $this->module->version;
-
-        // Automatically create a backup of the current version BEFORE applying update
-        $backup_dir = _PS_MODULE_DIR_ . 'argsellers_backup/';
-        $current_dir = _PS_MODULE_DIR_ . 'argsellers/';
-        if (file_exists($backup_dir)) {
-            $this->recursiveRemoveDir($backup_dir);
-        }
-        $this->rcopy($current_dir, $backup_dir);
-        Configuration::updateValue('ARGSELLERS_BACKUP_VERSION', $version_before);
         
         // Priority 1: GitHub Repository Archive ZIP URL
         // Priority 2: Raw repository argsellers.zip URL
@@ -377,48 +334,6 @@ class AdminArgsSellersController extends ModuleAdminController
         } else if (file_exists($src)) {
             copy($src, $dst);
         }
-    }
-
-    public function processRollbackModule()
-    {
-        $backup_dir = _PS_MODULE_DIR_ . 'argsellers_backup/';
-        $module_dir = _PS_MODULE_DIR_ . 'argsellers/';
-        $backup_version = Configuration::get('ARGSELLERS_BACKUP_VERSION');
-        if (!$backup_version) {
-            $backup_version = 'anterior';
-        }
-
-        if (file_exists($backup_dir . 'argsellers.php')) {
-            $this->rcopy($backup_dir, $module_dir);
-
-            try {
-                Tools::clearSmartyCache();
-                Tools::clearXMLCache();
-                Media::clearCache();
-            } catch (Exception $e) {}
-
-            $msg = 'Se restauró la versión anterior (v' . $backup_version . ') correctamente desde el backup de seguridad. Caché purgada.';
-            $this->context->cookie->argsellers_conf = $msg;
-            $this->context->cookie->argsellers_conf_type = 'success';
-        } else {
-            $msg = 'No se encontró ningún backup de la versión anterior para restaurar.';
-            $this->context->cookie->argsellers_conf = $msg;
-            $this->context->cookie->argsellers_conf_type = 'warning';
-        }
-
-        Tools::redirectAdmin(self::$currentIndex . '&token=' . $this->token);
-    }
-
-    private function recursiveRemoveDir($dir)
-    {
-        if (!file_exists($dir)) {
-            return;
-        }
-        $files = array_diff(scandir($dir), array('.', '..'));
-        foreach ($files as $file) {
-            (is_dir("$dir/$file")) ? $this->recursiveRemoveDir("$dir/$file") : unlink("$dir/$file");
-        }
-        return rmdir($dir);
     }
 
     public function displayImage($value, $row)
