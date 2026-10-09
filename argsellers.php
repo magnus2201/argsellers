@@ -22,7 +22,7 @@ class Argsellers extends Module
     {
         $this->name = 'argsellers';
         $this->tab = 'front_office_features';
-        $this->version = '3.3.1';
+        $this->version = '3.3.2';
         $this->author = 'ARGSEGURIDAD';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -353,7 +353,11 @@ class Argsellers extends Module
         if (empty($patterns)) {
             $patterns = array('%vendedores%');
         }
-        return $patterns;
+
+        // Automatic backward compatibility fallback
+        $patterns[] = '[argsellers]';
+
+        return array_unique($patterns);
     }
 
     public function hookDisplayHeader()
@@ -489,11 +493,11 @@ class Argsellers extends Module
     public function runUpgradeModule()
     {
         if (class_exists('Module')) {
-            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.3.1.php';
+            $up_file = _PS_MODULE_DIR_ . $this->name . '/upgrade/upgrade-3.3.2.php';
             if (file_exists($up_file)) {
                 include_once($up_file);
-                if (function_exists('upgrade_module_3_3_1')) {
-                    return upgrade_module_3_3_1($this);
+                if (function_exists('upgrade_module_3_3_2')) {
+                    return upgrade_module_3_3_2($this);
                 }
             }
         }
